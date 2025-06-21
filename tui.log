@@ -1,0 +1,41 @@
+INFO:root:Fetching tasks...
+INFO:root:Fetched 13 projects
+INFO:root:Loaded label: today (ID: 805832751) -> color: red
+INFO:root:Loaded label: purchase (ID: 805393610) -> color: green
+INFO:root:Loaded label: Kinderhook (ID: 805741689) -> color: lime_green
+INFO:root:Loaded label: Barry (ID: 805741688) -> color: violet
+INFO:root:Loaded label: -5m (ID: 805832691) -> color: mint_green
+INFO:root:Loaded label: -10m (ID: 805832692) -> color: mint_green
+INFO:root:Loaded label: -15m (ID: 805832664) -> color: mint_green
+INFO:root:Loaded label: -30m (ID: 805832665) -> color: mint_green
+INFO:root:Loaded label: -45m (ID: 805832693) -> color: mint_green
+INFO:root:Loaded label: -60m (ID: 805832694) -> color: mint_green
+INFO:root:Loaded label: *60m (ID: 805832696) -> color: mint_green
+INFO:root:Loaded label: waiting (ID: 805833117) -> color: charcoal
+INFO:root:Loaded label: inbox (ID: 805833335) -> color: charcoal
+INFO:root:Loaded label: possible-purchase (ID: 805834008) -> color: charcoal
+INFO:root:Loaded label: bill (ID: 805835778) -> color: green
+INFO:root:Loaded label: high-school (ID: 805953906) -> color: charcoal
+INFO:root:Loaded label: from-gmail (ID: 806004094) -> color: red
+INFO:root:Loaded label: monday (ID: 806100286) -> color: charcoal
+INFO:root:Loaded label: tuesday (ID: 806100287) -> color: charcoal
+INFO:root:Loaded label: wednesday (ID: 806100288) -> color: charcoal
+INFO:root:Loaded label: thursday (ID: 806100289) -> color: charcoal
+INFO:root:Loaded label: friday (ID: 806100290) -> color: charcoal
+INFO:root:Loaded label: saturday (ID: 806100291) -> color: charcoal
+INFO:root:Loaded label: sunday (ID: 806100292) -> color: charcoal
+INFO:root:Loaded label: Alexa (ID: 806114304) -> color: charcoal
+INFO:root:Loaded label: Sams (ID: 806117300) -> color: blue
+INFO:root:Loaded label: unifi (ID: 2155145838) -> color: teal
+INFO:root:Loaded label: Clever (ID: 2155151921) -> color: charcoal
+INFO:root:Loaded label: mosyle (ID: 2155245836) -> color: teal
+INFO:root:Loaded label: access-control (ID: 2155500885) -> color: charcoal
+INFO:root:Loaded label: accounts (ID: 2155982969) -> color: teal
+INFO:root:Loaded label: backup (ID: 2180369113) -> color: magenta
+INFO:root:Fetched 32 labels
+INFO:root:API returned: [[Task(id='63qqPJGFFm3q78VH', content='Check backups', description='', project_id='6Crg9P6RR56jX2fq', section_id=None, parent_id=None, labels=['backup'], priority=1, due=Due(date=datetime.date(2025, 6, 27), string='every week', lang='en', is_recurring=True, timezone=None), deadline=None, duration=None, is_collapsed=False, order=1, assignee_id=None, assigner_id=None, completed_at=None, creator_id='2969788', created_at=datetime.datetime(2020, 9, 8, 17, 42, 36, 384146, tzinfo=zoneinfo.ZoneInfo(key='UTC')), updated_at=datetime.datetime(2025, 6, 21, 22, 53, 30, 664804, tzinfo=zoneinfo.ZoneInfo(key='UTC')), meta=None), Task(id='63qqq57cGWmmHmHv', content='Send Minutes to deacons@cbchannibal.com', description='', project_id='6Crg9P6RRc8g3q8M', section_id=None, parent_id=None, labels=[], priority=1, due=None, deadline=None, duration=None, is_collapsed=False, order=1, assignee_id=None, assigner_id=None, completed_at=None, creator_id='2969788', created_at=datetime.datetime(2020, 11, 17, 13, 40, 24, 79248, tzinfo=zoneinfo.ZoneInfo(key='UTC')), updated_at=datetime.datetime(1970, 1, 1, 0, 0, tzinfo=zoneinfo.ZoneInfo(key='UTC')), meta=None), Task(id='63qrRffvm295Fjq8', content='Reseal front windows.', description='', project_id='6Crg9P6RRJmccgF8', section_id=None, parent_id=None, labels=[], priority=1, due=None, deadline=None, duration=None, is_collapsed=False, order=1, assignee_id=None, assigner_id=None, completed_at=None, creator_id='2969788', created_at=datetime.datetime(2020, 9, 20, 21, 5, 13, 797608, tzinfo=zoneinfo.ZoneInfo(key='UTC')), updated_at=datetime.datetime(1970, 1, 1, 0, 0, tzinfo=zoneinfo.ZoneInfo(key='UTC')), meta=None), Task(id='6cCW98XhQ8r29x3J', content='This is a test task, its been updated.', description='', project_id='6Crg9P6RR9mP452R', section_id=None, parent_id=None, labels=[], priority=1, due=None, deadline=None, duration=None, is_collapsed=False, order=1, assignee_id=None, assigner_id=None, completed_at=None, creator_id='2969788', created_at=datetime.datetime(2025, 6, 20, 16, 33, 20, 541612, tzinfo=zoneinfo.ZoneInfo(key='UTC')), updated_at=datetime.datetime(2025, 6, 20, 17, 32, 36, 729872, tzinfo=zoneinfo.ZoneInfo(key='UTC')), meta=None), Task(id='6cCmrMpVV3G8vmC8', content='New Task @newlabel', description='', project_id='6Crg9P6RQWVg5Q5g', section_id=None, parent_id=None, labels=[], priority=1, due=None, deadline=None, duration=None, is_collapsed=False, order=1, assignee_id=None, assigner_id=None, completed_at=None, creator_id='2969788', created_at=datetime.datetime(2025, 6, 21, 17, 5, 51, 909213, tzinfo=zoneinfo.ZoneInfo(key='UTC')), updated_at=datetime.datetime(2025, 6, 21, 21, 37, 14, 103727, tzinfo=zoneinfo.ZoneInfo(key='UTC')), meta=None), Task(id='6cCmrHcHX47f8Wwr', content='New task', description='', project_id='6Crg9P6RQWVg5Q5g', section_id=None, parent_id=None, labels=['Barry'], priority=1, due=None, deadline=None, duration=None, is_collapsed=False, order=2, assignee_id=None, assigner_id=None, completed_at=None, creator_id='2969788', created_at=datetime.datetime(2025, 6, 21, 17, 5, 27, 335184, tzinfo=zoneinfo.ZoneInfo(key='UTC')), updated_at=datetime.datetime(2025, 6, 21, 22, 52, 23, 280270, tzinfo=zoneinfo.ZoneInfo(key='UTC')), meta=None)]]
+INFO:root:Updating table with 6 items.
+INFO:root:Label 'backup' -> name: 'backup', color: 'magenta'
+INFO:root:Formatted label: '[magenta]backup[/magenta]'
+INFO:root:Label 'Barry' -> name: 'Barry', color: 'violet'
+INFO:root:No color mapping found for 'violet', returning plain: 'Barry'

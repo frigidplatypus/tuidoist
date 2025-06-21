@@ -1,0 +1,13 @@
+[project]
+name = "ptaskwarrior-tui"
+version = "0.1.0"
+description = "A modal TUI for viewing Todoist tasks using Textual."
+authors = ["Your Name <you@example.com>"]
+requires-python = ">=3.8"
+dependencies = [
+    "textual",
+    "todoist-api-python"
+]
+
+[tool.uv]
+# uv-specific settings can go here
