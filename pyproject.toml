@@ -9,5 +9,8 @@ dependencies = [
     "todoist-api-python"
 ]
 
+[project.scripts]
+ptaskwarrior-tui = "ptaskwarrior_tui.app:main"
+
 [tool.uv]
 # uv-specific settings can go here
