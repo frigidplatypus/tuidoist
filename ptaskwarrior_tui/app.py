@@ -1,4 +1,18 @@
-"""Main application module for the Todoist TUI."""
+"""Main application module fo    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("j", "down", "Down"),
+        ("k", "up", "Up"),
+        ("gg", "top", "Top"),
+        ("G", "bottom", "Bottom"),
+        ("r", "refresh", "Refresh"),
+        ("d", "complete_task", "Complete"),
+        ("D", "delete_task", "Delete"),
+        ("a", "add_task", "Add"),
+        ("e", "edit_task", "Edit"),
+        ("p", "select_project", "Project"),
+        ("P", "change_task_project", "Move"),
+        ("l", "manage_labels", "Labels"),
+    ]TUI."""
 
 import logging
 from typing import Optional, List, cast
@@ -40,6 +54,7 @@ class TodoistTUI(App):
         ("p", "select_project", "Select Project"),
         ("P", "change_task_project", "Change Project"),
         ("l", "manage_labels", "Manage Labels"),
+        ("r", "refresh", "Refresh"),
     ]
 
     def __init__(self, **kwargs):
@@ -168,6 +183,19 @@ class TodoistTUI(App):
         table = self.query_one(DataTable)
         if table.row_count > 0:
             table.cursor_coordinate = Coordinate(table.row_count - 1, 0)
+
+    def action_refresh(self) -> None:
+        """Refresh tasks from the server and update the display."""
+        # Fetch fresh data from the server
+        self.client.fetch_tasks()
+        self.client.fetch_projects() 
+        self.client.fetch_labels()
+        
+        # Refresh the table display
+        self._refresh_table_display()
+        
+        # Provide user feedback with visual notification
+        self.notify("Tasks refreshed!", severity="information")
 
     def get_selected_row_key(self):
         """Get the row key of the currently selected row."""
