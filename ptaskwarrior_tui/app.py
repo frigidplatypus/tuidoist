@@ -43,18 +43,18 @@ class TodoistTUI(App):
     CSS_PATH = "styles.tcss"
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("j", "down", "Down"),
-        ("k", "up", "Up"),
-        ("gg", "top", "Go to Top"),
-        ("G", "bottom", "Go to Bottom"),
-        ("d", "complete_task", "Complete Task"),
-        ("D", "delete_task", "Delete Task"),
-        ("a", "add_task", "Add Task"),
-        ("e", "edit_task", "Edit Task"),
-        ("p", "select_project", "Select Project"),
-        ("P", "change_task_project", "Change Project"),
-        ("l", "manage_labels", "Manage Labels"),
+        ("j", "down", ""),  # Hidden from footer but still functional
+        ("k", "up", ""),    # Hidden from footer but still functional
+        ("gg", "top", ""),  # Hidden from footer but still functional
+        ("G", "bottom", ""), # Hidden from footer but still functional
         ("r", "refresh", "Refresh"),
+        ("d", "complete_task", "Complete"),
+        ("D", "delete_task", "Delete"),
+        ("a", "add_task", "Add"),
+        ("e", "edit_task", "Edit"),
+        ("p", "select_project", "Project"),
+        ("P", "change_task_project", "Move"),
+        ("l", "manage_labels", "Labels"),
     ]
 
     def __init__(self, **kwargs):
