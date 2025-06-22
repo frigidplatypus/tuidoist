@@ -10,7 +10,7 @@ from textual.screen import ModalScreen
 from textual.coordinate import Coordinate
 from todoist_api_python.models import Project
 
-from ..utils import parse_natural_language_date, extract_task_id_from_row_key
+from ..utils import extract_task_id_from_row_key
 
 if TYPE_CHECKING:
     from ..app import TodoistTUI
@@ -317,24 +317,47 @@ class EditTaskScreen(ModalScreen):
         ("enter", "update_task", "Update Task"),
     ]
 
-    def __init__(self, task_id: str, current_content: str):
+    def __init__(self, task_id: str, current_task, client):
         super().__init__()
         self.task_id = task_id
-        self.current_content = current_content
+        self.current_task = current_task
+        self.client = client
+        self.current_content = current_task.content
 
     def compose(self):
+        # Get current task details
+        project_name = self.client.get_project_name(self.current_task.project_id)
+        due_date = getattr(self.current_task.due, 'date', 'No due date') if self.current_task.due else 'No due date'
+        
+        # Format current labels
+        current_labels = []
+        if self.current_task.labels:
+            for label_id in self.current_task.labels:
+                label_name = self.client.get_label_name(label_id)
+                current_labels.append(f"@{label_name}")
+        labels_text = ', '.join(current_labels) if current_labels else 'No labels'
+        
         yield Vertical(
             Label("Edit task (Enter to update, Escape to cancel):"),
-            Label("Natural language supported - e.g., 'Buy milk tomorrow at 3pm #shopping @urgent'"),
+            Label(f"[bold]Current project:[/bold] #{project_name}"),
+            Label(f"[bold]Due date:[/bold] {due_date}"),
+            Label(f"[bold]Labels:[/bold] {labels_text}"),
+            Label(""),
+            Label("Natural language supported - e.g., 'Task #ProjectName @label tomorrow'"),
             Input(value=self.current_content, id="task_input"),
             id="edit_task_container"
         )
 
     def on_mount(self):
-        # Focus the input field when the modal opens
+        # Focus the input field when the modal opens  
         input_field = self.query_one("#task_input", Input)
         input_field.focus()
-        # Move cursor to end of text
+        # Move cursor to end of text - this should not auto-select
+        self.call_after_refresh(self._position_cursor)
+
+    def _position_cursor(self):
+        """Position cursor at end of text after the widget is fully mounted."""
+        input_field = self.query_one("#task_input", Input)
         input_field.cursor_position = len(input_field.value)
 
     def action_update_task(self):
@@ -359,12 +382,11 @@ class EditTaskScreen(ModalScreen):
 
     def update_task(self, new_content: str):
         """Update the task using natural language processing where possible."""
-        app = cast("TodoistTUI", self.app)
+        from ..app import TodoistTUI
+        app = cast(TodoistTUI, self.app)
         
-        # Parse natural language date patterns
-        content, due_string = parse_natural_language_date(new_content)
-        
-        if app.client.update_task(self.task_id, content, due_string):
+        # Use natural language processing for the full content
+        if self.client.update_task_with_natural_language(self.task_id, new_content):
             # Refresh the task list to show the updated task
             app.run_worker(app.fetch_tasks, thread=True)
             self.dismiss()

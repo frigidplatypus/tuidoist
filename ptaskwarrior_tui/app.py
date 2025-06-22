@@ -240,7 +240,7 @@ class TodoistTUI(App):
                         break
                 
                 if current_task:
-                    self.push_screen(EditTaskScreen(actual_task_id, current_task.content))
+                    self.push_screen(EditTaskScreen(actual_task_id, current_task, self.client))
                 else:
                     self.bell()
                     logger.error(f"Could not find task with ID: {actual_task_id}")

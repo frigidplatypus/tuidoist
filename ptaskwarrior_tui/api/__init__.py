@@ -169,6 +169,91 @@ class TodoistClient:
             logger.error(f"Failed to update task {task_id}: {e}")
             return None
     
+    def update_task_with_natural_language(self, task_id: str, content_with_nl: str) -> Optional[Task]:
+        """Update a task by parsing natural language elements like #project and @labels."""
+        if not self.api:
+            return None
+        
+        try:
+            # Parse the content for natural language elements
+            parsed = self._parse_natural_language_elements(content_with_nl)
+            
+            # Update the task with parsed elements (excluding project_id which needs separate handling)
+            updated_task = self.api.update_task(
+                task_id=task_id,
+                content=parsed['content'],
+                due_string=parsed['due_string'],
+                labels=parsed['labels'] if parsed['labels'] else None
+            )
+            
+            # Handle project change separately if needed
+            if parsed['project_id']:
+                self.move_task(task_id, parsed['project_id'])
+            
+            logger.info(f"Updated task with natural language: {updated_task.content} (ID: {updated_task.id})")
+            return updated_task
+        except Exception as e:
+            logger.error(f"Failed to update task {task_id} with natural language: {e}")
+            return None
+    
+    def _parse_natural_language_elements(self, content: str) -> Dict[str, Any]:
+        """Parse natural language elements from task content."""
+        import re
+        
+        result = {
+            'content': content,
+            'due_string': None,
+            'project_id': None,
+            'labels': []
+        }
+        
+        # Parse project (#ProjectName)
+        project_match = re.search(r'#(\w+)', content)
+        if project_match:
+            project_name = project_match.group(1)
+            # Find project ID by name (case-insensitive)
+            for pid, pname in self.project_name_map.items():
+                if pname.lower() == project_name.lower():
+                    result['project_id'] = pid
+                    break
+            # Remove project from content
+            result['content'] = re.sub(r'\s*#\w+', '', result['content']).strip()
+        
+        # Parse labels (@LabelName)
+        label_matches = re.findall(r'@(\w+)', content)
+        if label_matches:
+            for label_name in label_matches:
+                # Find label name (case-insensitive) - API expects names, not IDs
+                for lid, lname in self.label_name_map.items():
+                    if lname.lower() == label_name.lower():
+                        result['labels'].append(lname)  # Use label name, not ID
+                        break
+                else:
+                    # If label doesn't exist, try to use the typed name directly
+                    result['labels'].append(label_name)
+            # Remove labels from content
+            result['content'] = re.sub(r'\s*@\w+', '', result['content']).strip()
+        
+        # Parse due dates (basic patterns)
+        due_patterns = [
+            r'\b(today|tomorrow|yesterday)\b',
+            r'\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b',
+            r'\b\d{1,2}[/-]\d{1,2}([/-]\d{2,4})?\b',
+            r'\bat \d{1,2}:\d{2}( ?[ap]m)?\b',
+            r'\b(next|this) (week|month|year)\b',
+            r'\bin \d+ (day|week|month|year)s?\b'
+        ]
+        
+        for pattern in due_patterns:
+            match = re.search(pattern, result['content'], re.IGNORECASE)
+            if match:
+                result['due_string'] = match.group(0)
+                # Remove due date from content
+                result['content'] = re.sub(pattern, '', result['content'], flags=re.IGNORECASE).strip()
+                break
+        
+        return result
+    
     def move_task(self, task_id: str, project_id: str) -> bool:
         """Move a task to a different project."""
         if not self.api:

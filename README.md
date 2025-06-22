@@ -102,9 +102,38 @@ The codebase follows Python best practices:
 
 The app supports Todoist's natural language processing for task creation and editing:
 
+### ✨ **Adding Tasks** (Full Natural Language)
 - `"Buy milk tomorrow at 3pm #shopping @urgent"`
-- `"Call dentist next Monday"`
+- `"Call dentist next Monday"`  
 - `"Review project proposal by Friday"`
+
+### ✨ **Editing Tasks** (Enhanced Natural Language)
+When editing tasks, you can now use natural language elements:
+
+- **Projects**: Add `#ProjectName` to move task to that project
+  - `"Fix bug #Work"` → moves task to Work project
+- **Labels**: Add `@LabelName` to add labels to the task
+  - `"Buy groceries @shopping @urgent"` → adds shopping and urgent labels
+- **Due Dates**: Add natural language dates
+  - `"Complete report tomorrow"` → sets due date to tomorrow
+  - `"Meeting next Friday at 2pm"` → sets due date and time
+
+### 📋 **Enhanced Edit Screen**
+The edit screen (press `e` on any task) now displays:
+
+- **Current project**: Shows `#ProjectName` of the task
+- **Due date**: Shows current due date or "No due date"
+- **Current labels**: Shows all current labels as `@label1, @label2`
+- **Smart cursor**: Cursor positioned at end of text (no auto-selection)
+
+This context helps you understand the task's current state and makes it easy to append changes using natural language.
+
+### 🔧 **How It Works**
+- The app parses `#Project`, `@Label`, and date patterns from your edit
+- Automatically moves tasks to the specified project
+- Adds the specified labels (creates them if they don't exist)
+- Sets due dates using natural language
+- Cleans up the task content by removing the parsed elements
 
 ## Label Colors
 
