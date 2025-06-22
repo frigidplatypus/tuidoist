@@ -16,6 +16,7 @@ from .screens import (
     ChangeProjectScreen,
     AddTaskScreen,
     EditTaskScreen,
+    LabelManagementScreen,
 )
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class TodoistTUI(App):
     """A Textual TUI for Todoist tasks."""
 
     TITLE = "Todoist TUI"
+    CSS_PATH = "styles.tcss"
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("j", "down", "Down"),
@@ -37,6 +39,7 @@ class TodoistTUI(App):
         ("e", "edit_task", "Edit Task"),
         ("p", "select_project", "Select Project"),
         ("P", "change_task_project", "Change Project"),
+        ("l", "manage_labels", "Manage Labels"),
     ]
 
     def __init__(self, **kwargs):
@@ -241,6 +244,34 @@ class TodoistTUI(App):
                 
                 if current_task:
                     self.push_screen(EditTaskScreen(actual_task_id, current_task, self.client))
+                else:
+                    self.bell()
+                    logger.error(f"Could not find task with ID: {actual_task_id}")
+
+    def action_manage_labels(self) -> None:
+        """Show the label management modal for the selected task."""
+        task_id = self.get_selected_row_key()
+        if task_id is not None:
+            actual_task_id = extract_task_id_from_row_key(task_id)
+            if actual_task_id:
+                # Find the task in the cache to get current labels
+                current_task = None
+                for task in self.client.tasks_cache:
+                    if isinstance(task, Task) and task.id == actual_task_id:
+                        current_task = task
+                        break
+                
+                if current_task:
+                    # Get current label names
+                    current_labels = [self.client.get_label_name(label_id) for label_id in current_task.labels or []]
+                    
+                    # Get available labels (label_id, label_name, label_color)
+                    available_labels = [
+                        (label_id, self.client.get_label_name(label_id), self.client.get_label_color(label_id) or "white")
+                        for label_id in self.client.label_name_map.keys()
+                    ]
+                    
+                    self.push_screen(LabelManagementScreen(actual_task_id, current_labels, available_labels))
                 else:
                     self.bell()
                     logger.error(f"Could not find task with ID: {actual_task_id}")

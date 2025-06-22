@@ -3,9 +3,10 @@
 import logging
 from typing import List, Tuple, cast, TYPE_CHECKING, Optional
 
-from textual.widgets import Label, Button, DataTable, Input, OptionList
+from textual.widgets import Label, Button, DataTable, Input, OptionList, SelectionList
 from textual.widgets.option_list import Option
-from textual.containers import Vertical
+from textual.widgets.selection_list import Selection
+from textual.containers import Vertical, Horizontal
 from textual.screen import ModalScreen
 from textual.coordinate import Coordinate
 from todoist_api_python.models import Project
@@ -16,6 +17,17 @@ if TYPE_CHECKING:
     from ..app import TodoistTUI
 
 logger = logging.getLogger(__name__)
+
+
+class CustomSelectionList(SelectionList):
+    """Custom SelectionList that prevents default enter behavior."""
+    
+    def key_enter(self, event):
+        """Override enter key to prevent default selection behavior."""
+        # Prevent the default enter behavior and don't do anything
+        # This allows the parent screen to handle the enter key
+        event.prevent_default()
+        return
 
 
 class DeleteConfirmScreen(ModalScreen):
@@ -392,3 +404,256 @@ class EditTaskScreen(ModalScreen):
             self.dismiss()
         else:
             app.bell()
+
+
+class LabelManagementScreen(ModalScreen):
+    """Modal screen for managing task labels with multi-select functionality."""
+    
+    BINDINGS = [
+        ("escape", "dismiss", "Cancel"),
+        ("q", "dismiss", "Cancel"),
+        ("j", "down", "Down"),
+        ("k", "up", "Up"),
+        ("gg", "top", "Go to Top"),
+        ("G", "bottom", "Go to Bottom"),
+        ("space", "toggle_label", "Toggle Label"),
+        ("a", "add_label", "Add Label"),
+        ("enter", "apply_changes", "Apply Changes"),
+        ("/", "focus_filter", "Filter Labels"),
+        ("tab", "toggle_focus", "Toggle Focus"),
+    ]
+    
+    def __init__(self, task_id: str, current_labels: List[str], available_labels: List[Tuple[str, str, str]]):
+        """
+        Initialize the label management screen.
+        
+        Args:
+            task_id: The ID of the task to manage labels for
+            current_labels: List of current label names on the task
+            available_labels: List of (label_id, label_name, label_color) tuples
+        """
+        super().__init__()
+        self.task_id = task_id
+        self.current_labels = set(current_labels)
+        self.available_labels = available_labels
+        self.filtered_labels = available_labels.copy()  # Initially show all labels
+        self.in_add_mode = False
+
+    def compose(self):
+        """Compose the label management interface."""
+        # Create selections for the SelectionList
+        selections = []
+        for label_id, label_name, label_color in self.available_labels:
+            # Check if this label is currently selected
+            initial_state = label_name in self.current_labels
+            # Create a rich text prompt that shows the label with color
+            prompt = f"[{label_color}]●[/] {label_name}"
+            selections.append(Selection(prompt, label_name, initial_state=initial_state))
+        
+        yield Vertical(
+            Label("Manage Labels", classes="title"),
+            Label("/ to filter, j/k to navigate, space to toggle, a to add, enter to apply, q to cancel:"),
+            Input(placeholder="Type to filter labels...", id="filter_input"),
+            CustomSelectionList(*selections, id="label_list"),
+            Input(placeholder="Type new label name and press Enter...", id="new_label_input", classes="hidden"),
+            Horizontal(
+                Button("Apply", id="apply_labels", variant="primary"),
+                Button("Cancel", id="cancel_labels"),
+                classes="button_row",
+            ),
+            classes="label_management",
+        )
+
+    def on_mount(self):
+        """Focus the SelectionList when the modal opens."""
+        self.query_one("#label_list", CustomSelectionList).focus()
+
+    def on_key(self, event):
+        """Handle key presses, especially enter when selection list has focus."""
+        label_list = self.query_one("#label_list", CustomSelectionList)
+        
+        if event.key == "enter" and label_list.has_focus:
+            # If enter is pressed while selection list has focus, apply changes
+            self.action_apply_changes()
+            event.prevent_default()
+            return
+        
+        # For other keys, don't prevent default behavior
+
+    def on_input_changed(self, event):
+        """Handle filter input changes."""
+        if event.input.id == "filter_input":
+            self._filter_labels(event.value)
+
+    def _filter_labels(self, filter_text: str):
+        """Filter the labels based on the search text."""
+        if not filter_text.strip():
+            # Show all labels if filter is empty
+            self.filtered_labels = self.available_labels.copy()
+        else:
+            # Filter labels that contain the search text (case-insensitive)
+            filter_lower = filter_text.lower()
+            self.filtered_labels = [
+                (label_id, label_name, label_color)
+                for label_id, label_name, label_color in self.available_labels
+                if filter_lower in label_name.lower()
+            ]
+        
+        # Update the SelectionList with filtered results
+        self._update_selection_list()
+
+    def _update_selection_list(self):
+        """Update the SelectionList with current filtered labels."""
+        label_list = self.query_one("#label_list", CustomSelectionList)
+        
+        # Get current selections before clearing
+        current_selections = set(label_list.selected) if hasattr(label_list, 'selected') else set()
+        
+        # Clear and repopulate with filtered labels
+        label_list.clear_options()
+        
+        selections = []
+        for label_id, label_name, label_color in self.filtered_labels:
+            # Maintain selection state for labels that are still visible
+            initial_state = (label_name in self.current_labels or 
+                           label_name in current_selections)
+            prompt = f"[{label_color}]●[/] {label_name}"
+            selections.append(Selection(prompt, label_name, initial_state=initial_state))
+        
+        if selections:
+            label_list.add_options(selections)
+
+    def action_focus_filter(self):
+        """Focus the filter input field."""
+        if not self.in_add_mode:
+            filter_input = self.query_one("#filter_input", Input)
+            filter_input.focus()
+
+    def action_toggle_focus(self):
+        """Toggle focus between filter input and selection list."""
+        filter_input = self.query_one("#filter_input", Input)
+        label_list = self.query_one("#label_list", CustomSelectionList)
+        
+        if filter_input.has_focus:
+            label_list.focus()
+        else:
+            filter_input.focus()
+
+    def action_down(self):
+        """Move down in the list."""
+        if not self.in_add_mode:
+            label_list = self.query_one("#label_list", CustomSelectionList)
+            if label_list.has_focus:
+                label_list.action_cursor_down()
+
+    def action_up(self):
+        """Move up in the list."""
+        if not self.in_add_mode:
+            label_list = self.query_one("#label_list", CustomSelectionList)
+            if label_list.has_focus:
+                label_list.action_cursor_up()
+
+    def action_top(self):
+        """Go to top of the list."""
+        if not self.in_add_mode:
+            label_list = self.query_one("#label_list", CustomSelectionList)
+            if label_list.has_focus:
+                label_list.action_first()
+
+    def action_bottom(self):
+        """Go to bottom of the list."""
+        if not self.in_add_mode:
+            label_list = self.query_one("#label_list", CustomSelectionList)
+            if label_list.has_focus:
+                label_list.action_last()
+
+    def action_toggle_label(self):
+        """Toggle the currently highlighted label."""
+        if not self.in_add_mode:
+            label_list = self.query_one("#label_list", CustomSelectionList)
+            if label_list.has_focus:
+                label_list.action_select()
+
+    def action_add_label(self):
+        """Enter add label mode."""
+        self.in_add_mode = True
+        input_widget = self.query_one("#new_label_input", Input)
+        input_widget.remove_class("hidden")
+        input_widget.focus()
+        input_widget.value = ""
+
+    def action_apply_changes(self):
+        """Apply the label changes to the task."""
+        if self.in_add_mode:
+            # If in add mode, treat enter as submitting the new label
+            self._submit_new_label()
+        else:
+            # Otherwise, apply the changes
+            self._apply_label_changes()
+
+    def on_button_pressed(self, event):
+        """Handle button presses."""
+        if event.button.id == "apply_labels":
+            self._apply_label_changes()
+        elif event.button.id == "cancel_labels":
+            self.dismiss()
+
+    def on_input_submitted(self, event):
+        """Handle input submission (Enter key)."""
+        if event.input.id == "new_label_input":
+            self._submit_new_label()
+        elif event.input.id == "filter_input":
+            # If enter is pressed in filter, focus the label list
+            self.query_one("#label_list", CustomSelectionList).focus()
+
+    def _submit_new_label(self):
+        """Submit a new label."""
+        input_widget = self.query_one("#new_label_input", Input)
+        new_label_name = input_widget.value.strip()
+        
+        if new_label_name:
+            app = cast("TodoistTUI", self.app)
+            # Try to create the new label
+            if app.client.create_label(new_label_name):
+                # Refresh the available labels and recreate the SelectionList
+                app.client.fetch_labels()  # Refresh cache
+                self._refresh_available_labels()
+                input_widget.value = ""  # Clear input
+            else:
+                app.bell()  # Error feedback
+        
+        # Exit add mode
+        self.in_add_mode = False
+        input_widget.add_class("hidden")
+        self.query_one("#label_list", CustomSelectionList).focus()
+
+    def _apply_label_changes(self):
+        """Apply the label changes to the task."""
+        app = cast("TodoistTUI", self.app)
+        
+        # Get selected labels from the SelectionList
+        label_list = self.query_one("#label_list", CustomSelectionList)
+        selected_labels = list(label_list.selected)
+        
+        # Update the task with the new labels
+        if app.client.update_task_labels(self.task_id, selected_labels):
+            app.bell()  # Success feedback
+            app._refresh_table_display()  # Refresh the main display
+        else:
+            app.bell()  # Error feedback
+        
+        self.dismiss()
+
+    def _refresh_available_labels(self):
+        """Refresh the available labels list from the client."""
+        app = cast("TodoistTUI", self.app)
+        
+        # Get updated available labels
+        self.available_labels = [
+            (label_id, app.client.get_label_name(label_id), app.client.get_label_color(label_id) or "white")
+            for label_id in app.client.label_name_map.keys()
+        ]
+        
+        # Re-apply current filter
+        filter_input = self.query_one("#filter_input", Input)
+        self._filter_labels(filter_input.value)

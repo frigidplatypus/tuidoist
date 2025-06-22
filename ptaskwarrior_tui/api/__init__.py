@@ -278,3 +278,37 @@ class TodoistClient:
     def get_label_color(self, label_id: str) -> Optional[str]:
         """Get label color by ID."""
         return self.label_color_map.get(label_id)
+
+    def update_task_labels(self, task_id: str, label_names: List[str]) -> bool:
+        """Update a task's labels."""
+        if not self.api:
+            return False
+        
+        try:
+            self.api.update_task(task_id=task_id, labels=label_names)
+            logger.info(f"Updated task {task_id} labels to: {label_names}")
+            
+            # Refresh the tasks cache to reflect the updated labels
+            self.fetch_tasks()
+            
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update task {task_id} labels: {e}")
+            return False
+
+    def create_label(self, name: str, color: str = "charcoal") -> bool:
+        """Create a new label."""
+        if not self.api:
+            return False
+        
+        try:
+            new_label = self.api.add_label(name=name, color=color)
+            logger.info(f"Created new label: {new_label.name} (ID: {new_label.id})")
+            # Update caches
+            self.label_name_map[new_label.id] = new_label.name
+            self.label_color_map[new_label.id] = new_label.color
+            self.label_by_name[new_label.name] = new_label.name
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create label '{name}': {e}")
+            return False
