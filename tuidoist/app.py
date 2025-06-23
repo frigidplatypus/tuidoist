@@ -5,7 +5,7 @@ Canonical API documentation: https://developer.todoist.com/api/v1/
 """
 
 import logging
-from typing import Optional, List, cast
+from typing import Optional, List
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, DataTable
 from textual.coordinate import Coordinate
@@ -14,6 +14,7 @@ from todoist_api_python.models import Task
 from .api import TodoistClient
 from .config import TODOIST_API_TOKEN
 from .utils import format_label_with_color, extract_task_id_from_row_key
+from .keybindings import get_keybindings
 from rich.text import Text
 from .screens import (
     DeleteConfirmScreen,
@@ -33,22 +34,7 @@ class TodoistTUI(App):
 
     TITLE = "Todoist TUI"
     CSS_PATH = "styles.tcss"
-    BINDINGS = [
-        ("q", "quit", "Quit"),
-        ("j", "down", ""),  # Hidden from footer but still functional
-        ("k", "up", ""),    # Hidden from footer but still functional
-        ("gg", "top", ""),  # Hidden from footer but still functional
-        ("G", "bottom", ""), # Hidden from footer but still functional
-        ("r", "refresh", "Refresh"),
-        ("d", "complete_task", "Complete"),
-        ("D", "delete_task", "Delete"),
-        ("a", "add_task", "Add"),
-        ("e", "edit_task", "Edit"),
-        ("p", "select_project", "Project"),
-        ("P", "change_task_project", "Move"),
-        ("l", "manage_labels", "Labels"),
-        ("f", "show_filter_modal", "Filter"),
-    ]
+    BINDINGS = get_keybindings("main_app")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

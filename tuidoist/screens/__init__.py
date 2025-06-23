@@ -13,6 +13,7 @@ from todoist_api_python.models import Project
 
 from ..utils import extract_task_id_from_row_key, format_filter_with_color
 from ..colors import get_filter_color, format_colored_text
+from ..keybindings import get_keybindings
 from rich.text import Text
 
 if TYPE_CHECKING:
@@ -34,6 +35,8 @@ class CustomSelectionList(SelectionList):
 
 class DeleteConfirmScreen(ModalScreen):
     """Modal screen for confirming task deletion."""
+    
+    BINDINGS = get_keybindings("delete_confirm")
     
     def __init__(self, task_id_str: str, row_key):
         super().__init__()
@@ -81,15 +84,7 @@ class ProjectSelectScreen(ModalScreen):
     }
     """
     
-    BINDINGS = [
-        ("escape", "dismiss", "Cancel"),
-        ("q", "dismiss", "Cancel"),
-        ("j", "down", "Down"),
-        ("k", "up", "Up"),
-        ("gg", "top", "Go to Top"),
-        ("G", "bottom", "Go to Bottom"),
-        ("enter", "select_project", "Select"),
-    ]
+    BINDINGS = get_keybindings("project_select")
 
     def __init__(self, projects: List[Project], active_project_id: Optional[str]):
         super().__init__()
@@ -163,12 +158,7 @@ class ProjectSelectScreen(ModalScreen):
 class ChangeProjectScreen(ModalScreen):
     """Screen for changing a task's project with fuzzy filtering."""
 
-    BINDINGS = [
-        ("escape", "dismiss", "Cancel"),
-        ("ctrl+c", "dismiss", "Cancel"),
-        ("tab", "toggle_focus", "Toggle Focus"),
-        ("enter", "select", "Select Project"),
-    ]
+    BINDINGS = get_keybindings("change_project")
 
     def __init__(self, task_id: str, projects: List[Tuple[str, str]]):
         super().__init__()
@@ -293,11 +283,7 @@ class ChangeProjectScreen(ModalScreen):
 class AddTaskScreen(ModalScreen):
     """Screen for adding a new task with natural language support."""
 
-    BINDINGS = [
-        ("escape", "dismiss", "Cancel"),
-        ("ctrl+c", "dismiss", "Cancel"),
-        ("enter", "add_task", "Add Task"),
-    ]
+    BINDINGS = get_keybindings("add_task")
 
     def compose(self):
         yield Vertical(
@@ -344,11 +330,7 @@ class AddTaskScreen(ModalScreen):
 class EditTaskScreen(ModalScreen):
     """Screen for editing an existing task."""
 
-    BINDINGS = [
-        ("escape", "dismiss", "Cancel"),
-        ("ctrl+c", "dismiss", "Cancel"),
-        ("enter", "update_task", "Update Task"),
-    ]
+    BINDINGS = get_keybindings("edit_task")
 
     def __init__(self, task_id: str, current_task, client):
         super().__init__()
@@ -448,19 +430,7 @@ class LabelManagementScreen(ModalScreen):
     }
     """
     
-    BINDINGS = [
-        ("escape", "dismiss", "Cancel"),
-        ("q", "dismiss", "Cancel"),
-        ("j", "down", "Down"),
-        ("k", "up", "Up"),
-        ("gg", "top", "Go to Top"),
-        ("G", "bottom", "Go to Bottom"),
-        ("space", "toggle_label", "Toggle Label"),
-        ("a", "add_label", "Add Label"),
-        ("enter", "apply_changes", "Apply Changes"),
-        ("/", "focus_filter", "Filter Labels"),
-        ("tab", "toggle_focus", "Toggle Focus"),
-    ]
+    BINDINGS = get_keybindings("label_management")
     
     def __init__(self, task_id: str, current_labels: List[str], available_labels: List[Tuple[str, str, str]]):
         """
@@ -800,14 +770,7 @@ class FilterSelectScreen(ModalScreen):
         if table.row_count > 0:
             table.cursor_coordinate = Coordinate(0, 0)
     
-    BINDINGS = [
-        ("escape", "cancel", "Cancel"),
-        ("q", "cancel", "Cancel"),
-        ("enter", "select_filter", "Select"),
-        ("r", "refresh_filters", "Refresh"),
-        ("j", "cursor_down", ""),
-        ("k", "cursor_up", ""),
-    ]
+    BINDINGS = get_keybindings("filter_select")
     
     def action_refresh_filters(self):
         """Refresh the filter list from Todoist."""
