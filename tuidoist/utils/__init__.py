@@ -2,16 +2,15 @@
 
 import logging
 import re
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 
-from ..colors import get_label_color, get_filter_color, get_todoist_color, format_colored_text
-from ..config import TODOIST_COLOR_MAP  # For backward compatibility
+from ..colors import get_label_color, get_filter_color
 from rich.text import Text
 
 logger = logging.getLogger(__name__)
 
 
-def format_label_with_color(label_identifier: str, label_name_map: dict, label_color_map: dict, label_by_name: dict):
+def format_label_with_color(label_identifier: str, label_name_map: Dict[str, str], label_color_map: Dict[str, str], label_by_name: Dict[str, str]) -> Text:
     """Format a label with its color using Rich Text object for DataTable."""
     # Try to get the label name (works for both ID and name lookups)
     label_name = label_name_map.get(label_identifier) or label_by_name.get(label_identifier, label_identifier)
@@ -83,7 +82,7 @@ def parse_natural_language_date(content: str) -> Tuple[str, Optional[str]]:
     return content, None
 
 
-def extract_task_id_from_row_key(row_key) -> Optional[str]:
+def extract_task_id_from_row_key(row_key: Any) -> Optional[str]:
     """Extract the actual task ID from a DataTable row key object."""
     if row_key is None:
         return None
@@ -97,7 +96,7 @@ def extract_task_id_from_row_key(row_key) -> Optional[str]:
 
 def validate_api_token(token: Optional[str]) -> bool:
     """Validate that the API token is properly set."""
-    return token is not None and isinstance(token, str) and len(token.strip()) > 0
+    return token is not None and len(token.strip()) > 0
 
 
 def format_filter_with_color(filter_name: str, filter_color: str):

@@ -10,7 +10,7 @@ Based on:
 - Textual color system: https://textual.textualize.io/css_types/color/
 """
 
-from typing import Dict, Optional
+from typing import Dict
 
 
 # Official Todoist color palette with hex values

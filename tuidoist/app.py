@@ -5,14 +5,13 @@ Canonical API documentation: https://developer.todoist.com/api/v1/
 """
 
 import logging
-from typing import Optional, List
+from typing import Optional, List, Any
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, DataTable
 from textual.coordinate import Coordinate
 from todoist_api_python.models import Task
 
 from .api import TodoistClient
-from .config import TODOIST_API_TOKEN
 from .utils import format_label_with_color, extract_task_id_from_row_key
 from .keybindings import get_keybindings
 from rich.text import Text
@@ -29,14 +28,14 @@ from .screens import (
 logger = logging.getLogger(__name__)
 
 
-class TodoistTUI(App):
+class TodoistTUI(App[None]):
     """A Textual TUI for Todoist tasks."""
 
     TITLE = "Todoist TUI"
     CSS_PATH = "styles.tcss"
-    BINDINGS = get_keybindings("main_app")
+    BINDINGS = get_keybindings("main_app")  # type: ignore[assignment]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.client = TodoistClient()
         self.active_project_id: Optional[str] = None  # None means show all projects
@@ -135,7 +134,7 @@ class TodoistTUI(App):
                     project_name = self.client.get_project_name(task.project_id)
                     
                     # Format labels for display with colors
-                    label_objects = []
+                    label_objects: List[Text] = []
                     if task.labels:  # Check if labels exist and are not None
                         for label_id in task.labels:
                             formatted_label = format_label_with_color(
@@ -226,7 +225,8 @@ class TodoistTUI(App):
         if self.active_filter:
             logger.info(f"Re-applying active filter: '{self.active_filter}'")
             def fetch_with_filter():
-                return self.fetch_filtered_tasks(self.active_filter)
+                if self.active_filter is not None:  # Type guard
+                    return self.fetch_filtered_tasks(self.active_filter)
             self.run_worker(fetch_with_filter, thread=True)
         else:
             logger.info("No active filter, fetching all tasks")

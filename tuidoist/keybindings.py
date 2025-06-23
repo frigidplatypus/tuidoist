@@ -4,7 +4,7 @@ This module contains all keybinding configurations for the main app and modal sc
 Having them centralized makes it easier to maintain consistency and modify bindings.
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 # Type alias for keybinding tuples: (key, action, description)
 Keybinding = Tuple[str, str, str]
@@ -117,7 +117,7 @@ def get_keybindings(screen_name: str) -> List[Keybinding]:
     return keybinding_map[screen_name]
 
 
-def get_all_keybindings() -> dict:
+def get_all_keybindings() -> Dict[str, List[Keybinding]]:
     """
     Get all keybindings organized by screen.
     
