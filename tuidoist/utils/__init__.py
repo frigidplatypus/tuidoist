@@ -33,12 +33,16 @@ def format_label_with_color(label_identifier: str, label_name_map: dict, label_c
     if label_color:
         # Use Rich Text object with the exact Todoist hex color
         hex_color = get_label_color(label_color)
-        text_obj = Text(label_name, style=hex_color)
+        # Create separate Text objects for the bullet and name, both with the same color
+        bullet_text = Text("●", style=hex_color)
+        name_text = Text(f" {label_name}", style=hex_color)
+        # Combine them
+        combined_text = bullet_text + name_text
         logger.info(f"Created Rich Text object for label: '{label_name}' with color: '{hex_color}'")
-        return text_obj
+        return combined_text
     else:
         logger.info(f"No color found for label '{label_identifier}', returning plain text: '{label_name}'")
-        return Text(label_name)
+        return Text(f"● {label_name}")
 
 
 def parse_natural_language_date(content: str) -> Tuple[str, Optional[str]]:

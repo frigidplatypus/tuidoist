@@ -11,7 +11,7 @@ from textual.screen import ModalScreen
 from textual.coordinate import Coordinate
 from todoist_api_python.models import Project
 
-from ..utils import extract_task_id_from_row_key, format_filter_with_color, format_filter_with_color
+from ..utils import extract_task_id_from_row_key, format_filter_with_color
 from ..colors import get_filter_color, format_colored_text
 from rich.text import Text
 
@@ -485,8 +485,8 @@ class LabelManagementScreen(ModalScreen):
         for label_id, label_name, label_color in self.available_labels:
             # Check if this label is currently selected
             initial_state = label_name in self.current_labels
-            # Create a rich text prompt that shows the label with color
-            prompt = f"[{label_color}]●[/] {label_name}"
+            # Create a rich text prompt that shows the label with color for both bullet and text
+            prompt = f"[{label_color}]● {label_name}[/]"
             selections.append(Selection(prompt, label_name, initial_state=initial_state))
         
         yield Vertical(
@@ -556,7 +556,8 @@ class LabelManagementScreen(ModalScreen):
             # Maintain selection state for labels that are still visible
             initial_state = (label_name in self.current_labels or 
                            label_name in current_selections)
-            prompt = f"[{label_color}]●[/] {label_name}"
+            # Create a rich text prompt that shows the label with color for both bullet and text
+            prompt = f"[{label_color}]● {label_name}[/]"
             selections.append(Selection(prompt, label_name, initial_state=initial_state))
         
         if selections:
