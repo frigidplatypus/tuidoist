@@ -1,8 +1,14 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tuidoist"
-version = "0.1.0"
+version = "0.7.0"
 description = "A modal TUI for viewing Todoist tasks using Textual."
-authors = ["Your Name <you@example.com>"]
+authors = [
+    {name = "Justin Martin", email = "justin@frigidplatyp.us"}
+]
 requires-python = ">=3.8"
 dependencies = [
     "textual",
@@ -11,6 +17,9 @@ dependencies = [
 
 [project.scripts]
 tuidoist = "tuidoist.app:main"
+
+[tool.setuptools.package-data]
+tuidoist = ["*.tcss"]
 
 [tool.uv]
 # uv-specific settings can go here
