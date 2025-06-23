@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class TodoistTUI(App[None]):
     """A Textual TUI for Todoist tasks."""
 
-    TITLE = "Todoist TUI"
+    TITLE = "Tuidoist"
     CSS_PATH = "styles.tcss"
     BINDINGS = get_keybindings("main_app")  # type: ignore[assignment]
 
@@ -45,9 +45,7 @@ class TodoistTUI(App[None]):
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
-        from textual.widgets import Label
         yield Header()
-        yield Label(f"Current Filter: {self.active_filter_name}", id="filter_status")
         yield DataTable(id="tasks_table")
         yield Footer()
 
@@ -175,23 +173,11 @@ class TodoistTUI(App[None]):
         # Update the title to show active project and filter
         project_name = self.get_active_project_name()
         if self.active_filter:
-            self.title = f"Todoist TUI - {project_name} - {self.active_filter_name}"
+            self.title = f"Tuidoist - {project_name} - {self.active_filter_name}"
             logger.info(f"Updated title to: {self.title}")
         else:
-            self.title = f"Todoist TUI - {project_name}"
+            self.title = f"Tuidoist - {project_name}"
             logger.info(f"Updated title to: {self.title}")
-        
-        # Update the filter status label
-        from textual.widgets import Label
-        try:
-            filter_label = self.query_one("#filter_status", Label)
-            filter_text = f"Current Filter: {self.active_filter_name}"
-            if self.active_filter:
-                filter_text += f" (Query: {self.active_filter})"
-            filter_label.update(filter_text)
-            logger.info(f"Updated filter label to: {filter_text}")
-        except Exception as e:
-            logger.error(f"Failed to update filter label: {e}")
         
         logger.info("_refresh_table_display completed")
 
