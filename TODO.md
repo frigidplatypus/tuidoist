@@ -1,4 +1,9 @@
-# Todoist TUI - Feature Roadmap & TODO
+# Todoist TUI - F### 1. Task Priorities & Visual Indicators
+- [x] **1.1** Add priority field to task display table
+- [ ] **1.2** Implement priority setting in add/edit task modals
+- [x] **1.3** Add priority visual indicators (colors/symbols: P1🔴, P2🟡, P3🔵, P4⚪)
+- [ ] **1.4** Add priority-based sorting option
+- [x] **1.5** Add `priority` keybinding to quickly set task prioritye Roadmap & TODO
 
 ## 🎯 **Current Status**
 - ✅ **Completed**: Basic TUI with task CRUD operations
@@ -16,11 +21,10 @@
 ## 🚀 **HIGH PRIORITY** (Phase 1 - Core Features)
 
 ### 1. Task Priorities & Visual Indicators
-- [ ] **1.1** Add priority field to task display table
-- [ ] **1.2** Implement priority setting in add/edit task modals
-- [ ] **1.3** Add priority visual indicators (colors/symbols: P1🔴, P2🟡, P3🔵, P4⚪)
+- [x] **1.1** Add priority field to task display table
+- [x] **1.3** Add priority visual indicators (colors/symbols: P1🔴, P2🟡, P3🔵, P4⚪)
 - [ ] **1.4** Add priority-based sorting option
-- [ ] **1.5** Add `priority` keybinding to quickly set task priority
+- [x] **1.5** Add `priority` keybinding to quickly set task priority
 
 ### 2. Due Date Management & Time-Based Filtering
 - [ ] **2.1** Add due date time display (not just date)
