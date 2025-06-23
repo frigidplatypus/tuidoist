@@ -25,6 +25,7 @@ class TodoistClient:
         """Initialize the Todoist API client."""
         self.api = TodoistAPI(TODOIST_API_TOKEN) if TODOIST_API_TOKEN and isinstance(TODOIST_API_TOKEN, str) else None
         self.project_name_map: Dict[str, str] = {}  # Maps project ID to project name
+        self.project_color_map: Dict[str, str] = {}  # Maps project ID to project color
         self.label_name_map: Dict[str, str] = {}  # Maps label ID to label name
         self.label_color_map: Dict[str, str] = {}  # Maps label ID to label color
         self.label_by_name: Dict[str, str] = {}  # Maps label name to label name (for reverse lookup)
@@ -56,9 +57,12 @@ class TodoistClient:
                 projects_to_process = cast(List[Project], projects)
             
             self.project_name_map = {}
+            self.project_color_map = {}
             for project in projects_to_process:
                 if isinstance(project, Project):
                     self.project_name_map[project.id] = project.name
+                    self.project_color_map[project.id] = project.color
+                    logger.debug(f"Loaded project: {project.name} (ID: {project.id}) -> color: {project.color}")
             
             self.projects_cache = projects_to_process
             logger.info(f"Fetched {len(projects_to_process)} projects")
@@ -369,7 +373,14 @@ class TodoistClient:
     
     def get_project_name(self, project_id: str) -> str:
         """Get project name by ID."""
-        return self.project_name_map.get(project_id, 'Unknown Project')
+        project_name = self.project_name_map.get(project_id, 'Unknown Project')
+        if project_name == 'Unknown Project':
+            logger.warning(f"Project ID '{project_id}' not found in project_name_map. Available keys: {list(self.project_name_map.keys())}")
+        return project_name
+    
+    def get_project_color(self, project_id: str) -> Optional[str]:
+        """Get project color by ID."""
+        return self.project_color_map.get(project_id)
     
     def get_label_name(self, label_id: str) -> str:
         """Get label name by ID."""

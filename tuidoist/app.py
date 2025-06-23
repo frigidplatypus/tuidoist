@@ -12,7 +12,7 @@ from textual.coordinate import Coordinate
 from todoist_api_python.models import Task
 
 from .api import TodoistClient
-from .utils import format_label_with_color, extract_task_id_from_row_key
+from .utils import format_label_with_color, extract_task_id_from_row_key, format_project_with_color
 from .keybindings import get_keybindings
 from rich.text import Text
 from .screens import (
@@ -131,7 +131,13 @@ class TodoistTUI(App[None]):
             for task in tasks_to_show:
                 if isinstance(task, Task):
                     due_date = getattr(task.due, 'date', 'N/A')
-                    project_name = self.client.get_project_name(task.project_id)
+                    
+                    # Format project name with color
+                    project_display = format_project_with_color(
+                        task.project_id,
+                        self.client.project_name_map,
+                        self.client.project_color_map
+                    )
                     
                     # Format labels for display with colors
                     label_objects: List[Text] = []
@@ -156,7 +162,7 @@ class TodoistTUI(App[None]):
                         labels_display = Text("")
                     
                     # Use task.id as the row key (internal identifier)
-                    table.add_row(task.content, due_date, project_name, labels_display, key=task.id)
+                    table.add_row(task.content, due_date, project_display, labels_display, key=task.id)
                     logger.debug(f"Added task: {task.content[:50]}...")
                 else:
                     logger.warning(f"Skipping non-task item: {task}")
@@ -274,12 +280,34 @@ class TodoistTUI(App[None]):
 
     def action_select_project(self) -> None:
         """Show project selection modal."""
+        # Ensure projects are fetched before showing the modal
+        if not self.client.projects_cache:
+            logger.info("Fetching projects before showing modal...")
+            try:
+                self.client.fetch_projects()
+                logger.info(f"Successfully fetched {len(self.client.projects_cache)} projects for modal")
+            except Exception as e:
+                logger.error(f"Failed to fetch projects for modal: {e}")
+                # Continue anyway - the modal will show the error
+        
         if self.client.projects_cache:
-            self.push_screen(ProjectSelectScreen(self.client.projects_cache, self.active_project_id))
+            self.push_screen(ProjectSelectScreen(
+                self.client.projects_cache, 
+                self.active_project_id,
+                self.client.project_color_map
+            ))
 
     def set_active_project(self, project_id: Optional[str] = None) -> None:
         """Set the active project and refresh the display."""
+        logger.info(f"SET_ACTIVE_PROJECT called with project_id: '{project_id}'")
         self.active_project_id = project_id
+        
+        # Log debug info about project mapping
+        if project_id is not None:
+            project_name = self.client.get_project_name(project_id)
+            logger.info(f"Project ID '{project_id}' maps to name: '{project_name}'")
+            logger.info(f"Available projects in map: {list(self.client.project_name_map.keys())}")
+        
         self._refresh_table_display()
 
     def action_add_task(self) -> None:
@@ -294,7 +322,8 @@ class TodoistTUI(App[None]):
             if actual_task_id:
                 self.push_screen(ChangeProjectScreen(
                     actual_task_id, 
-                    list(self.client.project_name_map.items())
+                    list(self.client.project_name_map.items()),
+                    self.client.project_color_map
                 ))
 
     def action_edit_task(self) -> None:

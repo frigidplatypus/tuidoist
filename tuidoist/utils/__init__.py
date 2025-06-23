@@ -4,10 +4,45 @@ import logging
 import re
 from typing import Optional, Tuple, Dict, Any
 
-from ..colors import get_label_color, get_filter_color
+from ..colors import get_label_color, get_filter_color, get_project_color
 from rich.text import Text
 
 logger = logging.getLogger(__name__)
+
+
+def format_project_option_with_color(project_id: str, project_name: str, project_color_map: Dict[str, str]) -> Text:
+    """Format a project name for use in OptionList or similar widgets with color support."""
+    project_color = project_color_map.get(project_id)
+    
+    if project_color:
+        # Use Rich Text object with the exact Todoist hex color
+        hex_color = get_project_color(project_color)
+        # Create colored text for the project name with bullet
+        project_text = Text(f"● {project_name}", style=hex_color)
+        logger.debug(f"Created Rich Text for project option: '{project_name}' with color: '{hex_color}'")
+        return project_text
+    else:
+        logger.debug(f"No color found for project '{project_id}', returning plain text: '{project_name}'")
+        return Text(f"● {project_name}")
+
+
+def format_project_with_color(project_id: str, project_name_map: Dict[str, str], project_color_map: Dict[str, str]) -> Text:
+    """Format a project with its color using Rich Text object for DataTable."""
+    project_name = project_name_map.get(project_id, f"Unknown Project ({project_id})")
+    project_color = project_color_map.get(project_id)
+    
+    logger.debug(f"Project '{project_id}' -> name: '{project_name}', color: '{project_color}'")
+    
+    if project_color:
+        # Use Rich Text object with the exact Todoist hex color
+        hex_color = get_project_color(project_color)
+        # Create colored text for the project name
+        project_text = Text(project_name, style=f"bold {hex_color}")
+        logger.debug(f"Created Rich Text object for project: '{project_name}' with color: '{hex_color}'")
+        return project_text
+    else:
+        logger.debug(f"No color found for project '{project_id}', returning plain text: '{project_name}'")
+        return Text(project_name, style="bold")
 
 
 def format_label_with_color(label_identifier: str, label_name_map: Dict[str, str], label_color_map: Dict[str, str], label_by_name: Dict[str, str]) -> Text:

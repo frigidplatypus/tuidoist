@@ -1,7 +1,7 @@
 """Modal screens for the Todoist TUI."""
 
 import logging
-from typing import List, Tuple, cast, TYPE_CHECKING, Optional
+from typing import List, Tuple, cast, TYPE_CHECKING, Optional, Dict
 
 from textual.widgets import Label, Button, DataTable, Input, OptionList, SelectionList
 from textual.widgets.option_list import Option
@@ -11,7 +11,7 @@ from textual.screen import ModalScreen
 from textual.coordinate import Coordinate
 from todoist_api_python.models import Project
 
-from ..utils import extract_task_id_from_row_key, format_filter_with_color
+from ..utils import extract_task_id_from_row_key, format_filter_with_color, format_project_with_color
 from ..colors import get_filter_color, format_colored_text
 from ..keybindings import get_keybindings
 from rich.text import Text
@@ -86,10 +86,11 @@ class ProjectSelectScreen(ModalScreen):
     
     BINDINGS = get_keybindings("project_select")
 
-    def __init__(self, projects: List[Project], active_project_id: Optional[str]):
+    def __init__(self, projects: List[Project], active_project_id: Optional[str], project_color_map: Optional[Dict[str, str]] = None):
         super().__init__()
         self.projects = projects
         self.active_project_id = active_project_id
+        self.project_color_map = project_color_map or {}
 
     def compose(self):
         yield Vertical(
@@ -106,10 +107,16 @@ class ProjectSelectScreen(ModalScreen):
         # Add "All Projects" option
         table.add_row("All Projects", key="all")
         
-        # Add individual projects
+        # Add individual projects with colors
         for project in self.projects:
             if isinstance(project, Project):
-                table.add_row(project.name, key=project.id)
+                # Format project name with color
+                project_display = format_project_with_color(
+                    project.id,
+                    {project.id: project.name},  # Simple name map for this project
+                    self.project_color_map
+                )
+                table.add_row(project_display, key=project.id)
         
         # Set cursor to current active project
         table.cursor_coordinate = Coordinate(0, 0)
@@ -142,10 +149,14 @@ class ProjectSelectScreen(ModalScreen):
                     row_key = row_keys[row]
                     app = cast("TodoistTUI", self.app)
                     
-                    if row_key == "all":
+                    # Extract the actual project ID from the row key using utility function
+                    from ..utils import extract_task_id_from_row_key
+                    project_id = extract_task_id_from_row_key(row_key)
+                    
+                    if project_id == "all":
                         app.set_active_project(None)
                     else:
-                        app.set_active_project(str(row_key))
+                        app.set_active_project(project_id)
                     
                     self.dismiss()
             except (AttributeError, IndexError):
@@ -160,17 +171,30 @@ class ChangeProjectScreen(ModalScreen):
 
     BINDINGS = get_keybindings("change_project")
 
-    def __init__(self, task_id: str, projects: List[Tuple[str, str]]):
+    def __init__(self, task_id: str, projects: List[Tuple[str, str]], project_color_map: Optional[Dict[str, str]] = None):
         super().__init__()
         self.task_id = task_id
         self.projects = projects  # List of (project_id, project_name) tuples
+        self.project_color_map = project_color_map or {}
         self.filtered_projects = projects.copy()
+
+    def _create_colored_option(self, proj_id: str, name: str) -> Option:
+        """Create an Option with colored project name if color is available."""
+        project_color = self.project_color_map.get(proj_id)
+        if project_color:
+            from ..colors import get_project_color
+            hex_color = get_project_color(project_color)
+            # Create colored text using Rich markup
+            colored_name = f"[{hex_color}]● {name}[/{hex_color}]"
+            return Option(colored_name, id=proj_id)
+        else:
+            return Option(f"● {name}", id=proj_id)
 
     def compose(self):
         yield Vertical(
             Label("Change task project (type to filter, Tab to switch focus, Escape to cancel):"),
             Input(placeholder="Type to filter projects...", id="project_filter"),
-            OptionList(*[Option(name, id=proj_id) for proj_id, name in self.projects], id="project_list"),
+            OptionList(*[self._create_colored_option(proj_id, name) for proj_id, name in self.projects], id="project_list"),
             id="change_project_container"
         )
 
@@ -197,7 +221,7 @@ class ChangeProjectScreen(ModalScreen):
             filter_text = event.value.lower()
             if not filter_text:
                 # Show all projects if no filter
-                filtered_options = [Option(name, id=proj_id) for proj_id, name in self.projects]
+                filtered_options = [self._create_colored_option(proj_id, name) for proj_id, name in self.projects]
             else:
                 # Simple fuzzy matching - contains all characters in order
                 filtered_projects = []
@@ -205,7 +229,7 @@ class ChangeProjectScreen(ModalScreen):
                     name_lower = name.lower()
                     if all(char in name_lower for char in filter_text):
                         filtered_projects.append((proj_id, name))
-                filtered_options = [Option(name, id=proj_id) for proj_id, name in filtered_projects]
+                filtered_options = [self._create_colored_option(proj_id, name) for proj_id, name in filtered_projects]
             
             option_list = self.query_one("#project_list", OptionList)
             option_list.clear_options()
