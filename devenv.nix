@@ -1,4 +1,10 @@
-{ pkgs, lib, config, inputs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}:
 
 {
   # https://devenv.sh/basics/
@@ -43,16 +49,7 @@
 
   enterShell = ''
     hello
-    git --version
-    echo "Django Bible Reading Plan Environment (devenv)"
-    echo "=============================================="
-    python --version
-    python -m django --version || echo "Django not found, check pyproject.toml or run 'uv pip install django'"
-    echo "To start the development server:"
-    echo "  python manage.py runserver"
-    echo "To create a new app:"
-    echo "  python manage.py startapp <app_name>"
-    echo "If using pyproject.toml, ensure your dependencies are listed there."
+
   '';
 
   # https://devenv.sh/tasks/

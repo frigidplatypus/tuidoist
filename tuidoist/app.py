@@ -431,8 +431,86 @@ class TodoistTUI(App[None]):
             self.run_worker(self.fetch_tasks, thread=True)
 
 
+def setup_config():
+    """Interactive setup to configure API token."""
+    from .config import get_config_directory
+    
+    print("🔧 Tuidoist Configuration Setup")
+    print("=" * 35)
+    print()
+    
+    # Check if token already exists
+    from .config import TODOIST_API_TOKEN
+    if TODOIST_API_TOKEN:
+        print("✅ API token is already configured!")
+        print("Current token status: Found and loaded")
+        print()
+        print("If you want to change your token, continue with this setup.")
+        print()
+    
+    print("Choose how to configure your Todoist API token:")
+    print()
+    print("1. Save to config file (recommended for production)")
+    print("2. Environment variable instructions")
+    print("3. Exit without changes")
+    print()
+    
+    choice = input("Enter your choice (1-3): ").strip()
+    
+    if choice == "1":
+        # Get API token from user
+        print()
+        print("📋 Get your API token from: https://todoist.com/prefs/integrations")
+        print()
+        token = input("Enter your Todoist API token: ").strip()
+        
+        if not token:
+            print("❌ No token provided. Setup cancelled.")
+            return
+        
+        # Create config directory using XDG specification
+        config_dir = get_config_directory()
+        config_file = config_dir / "config.toml"
+        
+        # Write config file
+        try:
+            with open(config_file, 'w') as f:
+                f.write(f'api_token = "{token}"\n')
+            
+            print(f"✅ API token saved to: {config_file}")
+            print()
+            print("You can now run 'tuidoist' to start the application!")
+            
+        except Exception as e:
+            print(f"❌ Failed to save config file: {e}")
+    
+    elif choice == "2":
+        print()
+        print("📋 Environment Variable Setup:")
+        print()
+        print("For development, you can use an environment variable:")
+        print("  export TODOIST_API_TOKEN='your_token_here'")
+        print()
+        print("Or create a .env file in your project directory:")
+        print("  echo 'TODOIST_API_TOKEN=your_token_here' > .env")
+        print()
+        print("Get your API token from: https://todoist.com/prefs/integrations")
+    
+    elif choice == "3":
+        print("Setup cancelled.")
+    
+    else:
+        print("❌ Invalid choice. Setup cancelled.")
+
 def main():
     """Entry point for the application."""
+    import sys
+    
+    # Check for setup command
+    if len(sys.argv) > 1 and sys.argv[1] == "--setup-config":
+        setup_config()
+        return
+    
     app = TodoistTUI()
     app.run()
 

@@ -142,3 +142,6 @@ dmypy.json
 # Application specific
 tui.log
 *.log
+
+result
+result/*

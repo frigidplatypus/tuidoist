@@ -45,22 +45,96 @@ tuidoist/
 
 ## Installation & Setup
 
-1. **Set your Todoist API token**:
+### 1. Install the Application
+
+```bash
+# With Nix (recommended)
+nix run github:username/tuidoist
+
+# Or clone and install locally
+git clone https://github.com/username/tuidoist
+cd tuidoist
+uv sync
+```
+
+### 2. Configure Your API Token
+
+#### Quick Setup (Recommended)
+```bash
+tuidoist --setup-config
+```
+
+#### Manual Configuration
+Tuidoist loads your API token from multiple sources in this priority order:
+
+1. **Config File** (Production - Recommended)
+   
+   **Linux/macOS:**
+   ```bash
+   mkdir -p ~/.config/tuidoist
+   echo 'api_token = "your_token_here"' > ~/.config/tuidoist/config.toml
+   ```
+   
+   **Windows:**
+   ```cmd
+   mkdir "%APPDATA%\tuidoist"
+   echo api_token = "your_token_here" > "%APPDATA%\tuidoist\config.toml"
+   ```
+
+2. **Plain Text File** (Alternative)
+   
+   **Linux/macOS:**
+   ```bash
+   mkdir -p ~/.config/tuidoist
+   echo "your_token_here" > ~/.config/tuidoist/api_token.txt
+   ```
+   
+   **Windows:**
+   ```cmd
+   mkdir "%APPDATA%\tuidoist"
+   echo your_token_here > "%APPDATA%\tuidoist\api_token.txt"
+   ```
+
+3. **Development .env File** (For Development)
+   ```bash
+   echo "TODOIST_API_TOKEN=your_token_here" > .env
+   ```
+
+4. **Environment Variable** (For CI/CD)
    ```bash
    export TODOIST_API_TOKEN="your_token_here"
    ```
 
-2. **Install dependencies**:
-   ```bash
-   uv sync
-   ```
+### 3. Get Your API Token
+1. Go to [Todoist Integrations Settings](https://todoist.com/prefs/integrations)
+2. Scroll down to "API token"
+3. Copy your personal API token
 
-3. **Run the application**:
-   ```bash
-   python main.py
-   # or using the package entry point:
-   tuidoist
-   ```
+### 4. Run the Application
+```bash
+tuidoist
+# or for development:
+python main.py
+```
+
+## Configuration
+
+### Environment Variables
+
+- **`TODOIST_API_TOKEN`** (optional): Your Todoist API token (fallback method)
+- **`TUIDOIST_ENABLE_LOGGING`** (optional): Set to `"true"` to enable file logging in production
+- **`XDG_CONFIG_HOME`** (optional): Override the default config directory location
+
+### Logging Behavior
+
+The application has intelligent logging that adapts to the environment:
+
+- **Development mode**: Automatically detected when running from source directory. Logs are written to `tui.log` in the project directory.
+- **Production mode**: When installed via Nix or pip:
+  - By default, only console warnings/errors are shown (no file logging)
+  - Set `TUIDOIST_ENABLE_LOGGING=true` to enable file logging to `~/.local/share/tuidoist/tui.log` (Linux/macOS) or `%LOCALAPPDATA%\tuidoist\tui.log` (Windows)
+
+This ensures the application works correctly when installed in read-only environments like NixOS.
 
 ## Todoist API Integration
 
