@@ -151,3 +151,28 @@ def format_filter_with_color(filter_name: str, filter_color: str):
     else:
         logger.info(f"No color found for filter '{filter_name}', returning plain text")
         return Text(f"● {filter_name}")
+
+
+def format_priority_indicator(priority: int) -> Text:
+    """Format priority as a colored indicator.
+    
+    Args:
+        priority: Priority level from 1 (normal) to 4 (urgent)
+        
+    Returns:
+        Rich Text object with colored priority indicator
+    """
+    # Priority mappings according to Todoist API:
+    # 1 = normal (default, no indicator)
+    # 2 = low (blue)
+    # 3 = medium (yellow/orange) 
+    # 4 = urgent (red)
+    
+    if priority == 4:
+        return Text("🔴", style="red")  # Urgent - red circle
+    elif priority == 3:
+        return Text("🟡", style="yellow")  # Medium - yellow circle
+    elif priority == 2:
+        return Text("🔵", style="blue")  # Low - blue circle
+    else:
+        return Text("⚪", style="white")  # Normal - white circle

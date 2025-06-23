@@ -12,7 +12,7 @@ from textual.coordinate import Coordinate
 from todoist_api_python.models import Task
 
 from .api import TodoistClient
-from .utils import format_label_with_color, extract_task_id_from_row_key, format_project_with_color
+from .utils import format_label_with_color, extract_task_id_from_row_key, format_project_with_color, format_priority_indicator
 from .keybindings import get_keybindings
 from rich.text import Text
 from .screens import (
@@ -130,6 +130,13 @@ class TodoistTUI(App[None]):
                 if isinstance(task, Task):
                     due_date = getattr(task.due, 'date', 'N/A')
                     
+                    # Format priority indicator and task content
+                    priority_indicator = format_priority_indicator(task.priority)
+                    task_content = Text("")
+                    task_content.append(priority_indicator)
+                    task_content.append(" ")  # Space between indicator and content
+                    task_content.append(task.content)
+                    
                     # Format project name with color
                     project_display = format_project_with_color(
                         task.project_id,
@@ -160,7 +167,7 @@ class TodoistTUI(App[None]):
                         labels_display = Text("")
                     
                     # Use task.id as the row key (internal identifier)
-                    table.add_row(task.content, due_date, project_display, labels_display, key=task.id)
+                    table.add_row(task_content, due_date, project_display, labels_display, key=task.id)
                     logger.debug(f"Added task: {task.content[:50]}...")
                 else:
                     logger.warning(f"Skipping non-task item: {task}")
@@ -373,50 +380,44 @@ class TodoistTUI(App[None]):
         
         self.push_screen(FilterSelectScreen())
 
-    def set_active_filter(self, filter_query: Optional[str], filter_name: str) -> None:
-        """Set the active filter and refresh the display."""
-        logger.info(f"SET_ACTIVE_FILTER called with query='{filter_query}', name='{filter_name}'")
-        self.apply_filter(filter_query, filter_name)
-
-    def fetch_filtered_tasks(self, filter_query: str) -> None:
-        """Fetch tasks using a filter query."""
-        try:
-            logger.info(f"FETCH_FILTERED_TASKS called with filter_query: '{filter_query}'")
-            
-            # Fetch projects, labels, and filters first
-            logger.info("Fetching projects, labels, and filters...")
-            self.client.fetch_projects()
-            self.client.fetch_labels()
-            self.client.fetch_filters()
-            
-            # Fetch tasks with filter
-            logger.info(f"About to call client.fetch_tasks_with_filter with query: '{filter_query}'")
-            tasks = self.client.fetch_tasks_with_filter(filter_query)
-            logger.info(f"Got {len(tasks)} tasks from fetch_tasks_with_filter")
-            self.call_from_thread(self.update_table, tasks)
-        except Exception as e:
-            logger.error(f"An error occurred during filtered fetch: {e}", exc_info=True)
-            self.call_from_thread(self.update_table_error, e)
-
-    def apply_filter(self, filter_query: Optional[str], filter_name: str) -> None:
-        """Apply a filter and refresh tasks."""
-        logger.info(f"APPLY_FILTER called with query='{filter_query}', name='{filter_name}'")
-        self.active_filter = filter_query
-        self.active_filter_name = filter_name
-        logger.info(f"Set active_filter='{self.active_filter}', active_filter_name='{self.active_filter_name}'")
-        
-        if filter_query:
-            logger.info(f"Starting filtered fetch with query: '{filter_query}'")
-            # Create a lambda wrapper for the run_worker call
-            def fetch_with_filter():
-                return self.fetch_filtered_tasks(filter_query)
-            self.run_worker(fetch_with_filter, thread=True)
+    def action_set_priority_1(self) -> None:
+        """Set the selected task priority to 1 (highest - urgent/red)."""
+        self._set_task_priority(4)  # API priority 4 = urgent
+    
+    def action_set_priority_2(self) -> None:
+        """Set the selected task priority to 2 (high - very high/blue)."""
+        self._set_task_priority(3)  # API priority 3 = very high
+    
+    def action_set_priority_3(self) -> None:
+        """Set the selected task priority to 3 (medium - high/yellow)."""
+        self._set_task_priority(2)  # API priority 2 = high
+    
+    def action_set_priority_4(self) -> None:
+        """Set the selected task priority to 4 (lowest - normal/white)."""
+        self._set_task_priority(1)  # API priority 1 = normal
+    
+    def action_clear_priority(self) -> None:
+        """Clear the selected task priority (set to normal)."""
+        self._set_task_priority(1)  # API priority 1 = normal
+    
+    def _set_task_priority(self, priority: int) -> None:
+        """Helper method to set task priority."""
+        task_id = self.get_selected_row_key()
+        if task_id is not None:
+            actual_task_id = extract_task_id_from_row_key(task_id)
+            if actual_task_id:
+                updated_task = self.client.update_task_priority(actual_task_id, priority)
+                if updated_task:
+                    # Refresh the task display to show the new priority indicator
+                    self.action_refresh()
+                else:
+                    self.bell()
+            else:
+                self.bell()
         else:
-            logger.info("Starting fetch of all tasks (no filter)")
-            # Fetch all tasks (no filter)
-            self.run_worker(self.fetch_tasks, thread=True)
+            self.bell()
 
-
+    # ...existing code...
 def setup_config():
     """Interactive setup to configure API token."""
     from .config import get_config_directory

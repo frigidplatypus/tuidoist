@@ -273,6 +273,30 @@ class TodoistClient:
             logger.error(f"Failed to update task {task_id}: {e}")
             return None
     
+    def update_task_priority(self, task_id: str, priority: int) -> Optional[Task]:
+        """Update task priority.
+        
+        Args:
+            task_id: The ID of the task to update
+            priority: Priority level (1=normal, 2=high, 3=very high, 4=urgent)
+        
+        Returns:
+            The updated task or None if the update failed
+        """
+        if not self.api:
+            return None
+        
+        try:
+            updated_task = self.api.update_task(
+                task_id=task_id,
+                priority=priority
+            )
+            logger.info(f"Updated task priority: {updated_task.content} (ID: {updated_task.id}) to priority {priority}")
+            return updated_task
+        except Exception as e:
+            logger.error(f"Failed to update task priority {task_id}: {e}")
+            return None
+    
     def update_task_with_natural_language(self, task_id: str, content_with_nl: str) -> Optional[Task]:
         """Update a task by parsing natural language elements like #project and @labels."""
         if not self.api:
