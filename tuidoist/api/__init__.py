@@ -8,7 +8,6 @@ request/response formats, authentication methods, and rate limits.
 """
 
 import logging
-import requests
 from typing import List, Dict, Optional, Any, cast
 from todoist_api_python.api import TodoistAPI
 from todoist_api_python.models import Task, Project
@@ -29,11 +28,12 @@ class TodoistClient:
         self.label_name_map: Dict[str, str] = {}  # Maps label ID to label name
         self.label_color_map: Dict[str, str] = {}  # Maps label ID to label color
         self.label_by_name: Dict[str, str] = {}  # Maps label name to label name (for reverse lookup)
+        self.filter_name_map: Dict[str, str] = {}  # Maps filter ID to filter name
+        self.filter_color_map: Dict[str, str] = {}  # Maps filter ID to filter color
         self.projects_cache: List[Any] = []  # Store the latest fetched projects
         self.labels_cache: List[Any] = []  # Store the latest fetched labels
         self.tasks_cache: List[Any] = []  # Store the latest fetched tasks
-        self.filters_cache: List[Dict[str, Any]] = []  # Store the latest fetched filters
-        self.filter_name_map: Dict[str, str] = {}  # Maps filter ID to filter name
+        self.filters_cache: List[Any] = []  # Store the latest fetched filters
     
     @property
     def is_initialized(self) -> bool:
@@ -101,78 +101,57 @@ class TodoistClient:
             return []
     
     def fetch_filters(self) -> List[Dict[str, Any]]:
-        """
-        Fetch user-defined filters from the Todoist API v1.
+        """Fetch filters from the Todoist API using the sync endpoint.
         
-        Uses the /sync endpoint with resource_types=["filters"] to fetch all personal filters.
-        See: https://developer.todoist.com/api/v1/
-        
-        Returns:
-            List[Dict[str, Any]]: List of filter objects
+        Note: The Python SDK doesn't have direct filter support, so we use
+        requests to call the sync API directly to get user-defined filters.
         """
-        if not TODOIST_API_TOKEN:
-            logger.warning("No API token available for fetching filters")
+        if not self.api:
             return []
         
         try:
-            logger.info("Fetching user filters from Todoist API v1...")
+            import requests
+            logger.info("Fetching filters from sync API...")
             
-            # Use the correct Todoist API v1 /sync endpoint to fetch filters
-            sync_url = "https://api.todoist.com/api/v1/sync"
+            # Use the sync endpoint to get filters
+            url = "https://api.todoist.com/sync/v9/sync"
             headers = {
                 "Authorization": f"Bearer {TODOIST_API_TOKEN}",
                 "Content-Type": "application/x-www-form-urlencoded"
             }
             data = {
-                "sync_token": "*",  # Use * to get all data for initial sync
-                "resource_types": '["filters"]'  # Only fetch filters
+                "sync_token": "*",
+                "resource_types": '["filters"]'
             }
             
-            logger.debug(f"Making sync request to {sync_url} for filters")
-            response = requests.post(sync_url, headers=headers, data=data)
+            response = requests.post(url, headers=headers, data=data)
             response.raise_for_status()
             
             sync_data = response.json()
             filters = sync_data.get("filters", [])
             
-            # Update caches
-            self.filters_cache = filters
+            # Clear and update filter maps
             self.filter_name_map = {}
+            self.filter_color_map = {}
             
-            for filter_obj in filters:
-                if isinstance(filter_obj, dict) and "id" in filter_obj and "name" in filter_obj:
-                    self.filter_name_map[str(filter_obj["id"])] = filter_obj["name"]
-                    logger.info(f"Loaded filter: {filter_obj['name']} (ID: {filter_obj['id']}) -> query: {filter_obj.get('query', 'N/A')}")
+            self.filters_cache = filters
+            logger.info(f"Fetched {len(filters)} filters")
             
-            logger.info(f"Successfully fetched {len(filters)} user filters from API v1")
+            for filter_item in filters:
+                if isinstance(filter_item, dict) and "id" in filter_item:
+                    filter_id = str(filter_item["id"])
+                    filter_name = filter_item.get("name", f"Filter {filter_id}")
+                    filter_color = filter_item.get("color", "charcoal")
+                    
+                    self.filter_name_map[filter_id] = filter_name
+                    self.filter_color_map[filter_id] = filter_color
+                    
+                    logger.info(f"Filter: {filter_name} (ID: {filter_id}) - Color: {filter_color} - Query: {filter_item.get('query')}")
+            
             return filters
-            
-        except requests.RequestException as e:
-            error_msg = f"Network error while fetching filters: {e}"
-            if hasattr(e, 'response') and e.response is not None:
-                error_msg += f" (HTTP {e.response.status_code})"
-                if e.response.status_code == 401:
-                    error_msg += " - Check your API token"
-                elif e.response.status_code == 403:
-                    error_msg += " - API access forbidden"
-                elif e.response.status_code == 429:
-                    error_msg += " - Rate limit exceeded"
-            logger.error(error_msg)
-            return []
         except Exception as e:
-            logger.error(f"Unexpected error while fetching filters: {e}", exc_info=True)
+            logger.error(f"Failed to fetch filters: {e}", exc_info=True)
             return []
-    
-    def get_filter_by_id(self, filter_id: str) -> Optional[Dict[str, Any]]:
-        """Get filter details by ID."""
-        for filter_obj in self.filters_cache:
-            if isinstance(filter_obj, dict) and str(filter_obj.get("id")) == str(filter_id):
-                return filter_obj
-        return None
-    
-    def get_filter_name(self, filter_id: str) -> str:
-        """Get filter name by ID."""
-        return self.filter_name_map.get(str(filter_id), f"Filter {filter_id}")
     
     def fetch_tasks(self) -> List[Task]:
         """Fetch tasks from the Todoist API and update cache."""
@@ -200,101 +179,39 @@ class TodoistClient:
     def fetch_tasks_with_filter(self, filter_query: str) -> List[Task]:
         """Fetch tasks from the Todoist API using a filter query.
         
-        Supports both built-in filters (today, overdue, this_week) and user-defined filters.
-        For user-defined filters, uses the /sync endpoint with the filter query.
+        Uses the SDK's filter_tasks method to apply Todoist's server-side filtering.
         """
         if not self.api:
+            logger.error("API client not initialized")
             return []
         
         try:
-            logger.info(f"Fetching tasks with filter: {filter_query}")
+            logger.info(f"CLIENT: fetch_tasks_with_filter called with query: '{filter_query}'")
             
-            # Check if this is a built-in filter that should be handled client-side
-            built_in_filters = ["today", "overdue", "this_week"]
+            # Use the SDK's filter_tasks method for server-side filtering
+            logger.info("CLIENT: About to call api.filter_tasks")
+            filtered_tasks_iter = self.api.filter_tasks(query=filter_query)
+            logger.info(f"CLIENT: Got iterator from filter_tasks: {filtered_tasks_iter}")
             
-            if filter_query in built_in_filters:
-                # Handle built-in filters with client-side filtering
-                tasks = list(self.api.get_tasks())
-                logger.info(f"API returned: {tasks}")  # Log the raw API response
-                
-                # Handle potentially nested list from the API response
-                if tasks and isinstance(tasks[0], list):
-                    tasks_to_process = cast(List[Task], tasks[0])
-                else:
-                    tasks_to_process = cast(List[Task], tasks)
-                
-                # Apply client-side filtering for built-in filters
-                filtered_tasks = self._apply_client_side_filter(tasks_to_process, filter_query)
-                
-                self.tasks_cache = filtered_tasks
-                logger.info(f"Fetched {len(filtered_tasks)} filtered tasks using built-in filter")
-                return filtered_tasks
-            else:
-                # This is likely a user-defined filter - use the sync API
-                filtered_tasks = self.fetch_tasks_with_user_filter(filter_query)
-                
-                self.tasks_cache = filtered_tasks
-                logger.info(f"Fetched {len(filtered_tasks)} filtered tasks using user filter")
-                return filtered_tasks
+            # Convert the iterator to a list
+            filtered_tasks = []
+            logger.info("CLIENT: Converting iterator to list...")
+            for i, task_batch in enumerate(filtered_tasks_iter):
+                logger.info(f"CLIENT: Processing batch {i} with {len(task_batch)} tasks")
+                filtered_tasks.extend(task_batch)
+                # Limit to prevent infinite loops in case of API issues
+                if i > 10:
+                    logger.warning("CLIENT: Breaking after 10 batches to prevent infinite loop")
+                    break
+            
+            logger.info(f"CLIENT: Total filtered tasks collected: {len(filtered_tasks)}")
+            self.tasks_cache = filtered_tasks
+            logger.info(f"CLIENT: Updated tasks_cache with {len(filtered_tasks)} tasks")
+            return filtered_tasks
                 
         except Exception as e:
-            logger.error(f"Failed to fetch filtered tasks: {e}", exc_info=True)
+            logger.error(f"CLIENT: Failed to fetch filtered tasks: {e}", exc_info=True)
             return []
-
-    def _apply_client_side_filter(self, tasks: List[Task], filter_query: str) -> List[Task]:
-        """Apply client-side filtering to tasks based on filter query."""
-        from datetime import datetime, date, timedelta
-        
-        if not filter_query:
-            return tasks
-        
-        filtered_tasks = []
-        today = date.today()
-        
-        for task in tasks:
-            include_task = False
-            
-            if filter_query == "today":
-                # Filter for tasks due today
-                if task.due and hasattr(task.due, 'date') and task.due.date:
-                    try:
-                        # task.due.date should be a string in YYYY-MM-DD format
-                        due_date_str = str(task.due.date)
-                        due_date = datetime.fromisoformat(due_date_str).date()
-                        include_task = due_date == today
-                    except (ValueError, AttributeError, TypeError):
-                        continue
-                        
-            elif filter_query == "overdue":
-                # Filter for overdue tasks
-                if task.due and hasattr(task.due, 'date') and task.due.date:
-                    try:
-                        due_date_str = str(task.due.date)
-                        due_date = datetime.fromisoformat(due_date_str).date()
-                        include_task = due_date < today
-                    except (ValueError, AttributeError, TypeError):
-                        continue
-                        
-            elif filter_query == "this_week":
-                # Filter for tasks due this week
-                if task.due and hasattr(task.due, 'date') and task.due.date:
-                    try:
-                        due_date_str = str(task.due.date)
-                        due_date = datetime.fromisoformat(due_date_str).date()
-                        # Calculate start and end of current week (Monday to Sunday)
-                        start_of_week = today - timedelta(days=today.weekday())
-                        end_of_week = start_of_week + timedelta(days=6)
-                        include_task = start_of_week <= due_date <= end_of_week
-                    except (ValueError, AttributeError, TypeError):
-                        continue
-            else:
-                # For unknown filters, include all tasks
-                include_task = True
-            
-            if include_task:
-                filtered_tasks.append(task)
-        
-        return filtered_tasks
 
     def complete_task(self, task_id: str) -> bool:
         """Complete a task."""
@@ -462,6 +379,14 @@ class TodoistClient:
         """Get label color by ID."""
         return self.label_color_map.get(label_id)
 
+    def get_filter_name(self, filter_id: str) -> str:
+        """Get filter name by ID."""
+        return self.filter_name_map.get(filter_id, filter_id)
+    
+    def get_filter_color(self, filter_id: str) -> Optional[str]:
+        """Get filter color by ID."""
+        return self.filter_color_map.get(filter_id)
+
     def update_task_labels(self, task_id: str, label_names: List[str]) -> bool:
         """Update a task's labels."""
         if not self.api:
@@ -496,59 +421,9 @@ class TodoistClient:
             logger.error(f"Failed to create label '{name}': {e}")
             return False
     
-    def fetch_tasks_with_user_filter(self, filter_query: str) -> List[Task]:
-        """Fetch tasks using a user-defined filter query via the /sync endpoint.
-        
-        Since the sync API returns different data structure than the REST API,
-        we'll fetch all tasks and then use the sync API to get filtered item IDs,
-        then return the matching Task objects.
-        """
-        if not TODOIST_API_TOKEN or not self.api:
-            logger.warning("No API token or API client available for fetching filtered tasks")
-            return []
-        
-        try:
-            logger.info(f"Fetching tasks with user filter: {filter_query}")
-            
-            # First, get all tasks using the regular API to have proper Task objects
-            all_tasks = list(self.api.get_tasks())
-            if all_tasks and isinstance(all_tasks[0], list):
-                all_tasks = cast(List[Task], all_tasks[0])
-            else:
-                all_tasks = cast(List[Task], all_tasks)
-            
-            # Now use the sync API to get filtered task IDs
-            sync_url = "https://api.todoist.com/sync/v1/sync"
-            headers = {
-                "Authorization": f"Bearer {TODOIST_API_TOKEN}",
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            data = {
-                "sync_token": "*",  # Use * to get all data
-                "resource_types": '["items"]',  # Fetch tasks (called "items" in sync API)
-                "filter": filter_query  # Apply the filter query
-            }
-            
-            response = requests.post(sync_url, headers=headers, data=data)
-            response.raise_for_status()
-            
-            sync_data = response.json()
-            filtered_items = sync_data.get("items", [])
-            
-            # Extract the IDs of filtered items
-            filtered_task_ids = {str(item.get("id")) for item in filtered_items if isinstance(item, dict) and "id" in item}
-            
-            # Return only the tasks that match the filtered IDs
-            matching_tasks = [task for task in all_tasks if str(task.id) in filtered_task_ids]
-            
-            logger.info(f"Fetched {len(matching_tasks)} tasks using user filter")
-            return matching_tasks
-            
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch filtered tasks - network error: {e}")
-            # Fallback to all tasks if sync API fails
-            return self.fetch_tasks()
-        except Exception as e:
-            logger.error(f"Failed to fetch filtered tasks: {e}", exc_info=True)
-            # Fallback to all tasks if anything fails
-            return self.fetch_tasks()
+    def get_filter_by_id(self, filter_id: str) -> Optional[Dict[str, Any]]:
+        """Get a filter by its ID from the cache."""
+        for filter_obj in self.filters_cache:
+            if isinstance(filter_obj, dict) and str(filter_obj.get("id")) == str(filter_id):
+                return filter_obj
+        return None

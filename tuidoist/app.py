@@ -14,6 +14,7 @@ from todoist_api_python.models import Task
 from .api import TodoistClient
 from .config import TODOIST_API_TOKEN
 from .utils import format_label_with_color, extract_task_id_from_row_key
+from rich.text import Text
 from .screens import (
     DeleteConfirmScreen,
     ProjectSelectScreen,
@@ -59,7 +60,9 @@ class TodoistTUI(App):
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
+        from textual.widgets import Label
         yield Header()
+        yield Label(f"Current Filter: {self.active_filter_name}", id="filter_status")
         yield DataTable(id="tasks_table")
         yield Footer()
 
@@ -103,37 +106,50 @@ class TodoistTUI(App):
 
     def update_table(self, tasks: List[Task]) -> None:
         """Update the DataTable with tasks."""
-        logger.info(f"Updating table with {len(tasks)} items.")
+        logger.info(f"UPDATE_TABLE called with {len(tasks)} tasks")
+        logger.info(f"Current active_filter: '{self.active_filter}', active_filter_name: '{self.active_filter_name}'")
+        logger.info(f"Tasks cache before refresh: {len(self.client.tasks_cache)} tasks")
+        logger.info(f"Tasks cache contents: {[t.content[:30] + '...' if len(t.content) > 30 else t.content for t in self.client.tasks_cache[:3]]}")
         self._refresh_table_display()
 
     def _refresh_table_display(self) -> None:
         """Refresh the table display with current filter settings."""
+        logger.info(f"_REFRESH_TABLE_DISPLAY called")
+        logger.info(f"Tasks cache has {len(self.client.tasks_cache)} tasks")
+        logger.info(f"Active project ID: {self.active_project_id}")
+        logger.info(f"Active filter: '{self.active_filter}', filter name: '{self.active_filter_name}'")
+        
         table = self.query_one(DataTable)
         table.clear()
         
         # Filter tasks based on active project
         if self.active_project_id is None:
             tasks_to_show = self.client.tasks_cache
+            logger.info(f"Showing all projects: {len(tasks_to_show)} tasks")
         else:
             tasks_to_show = [
                 task for task in self.client.tasks_cache 
                 if isinstance(task, Task) and task.project_id == self.active_project_id
             ]
+            logger.info(f"Filtering by project {self.active_project_id}: {len(tasks_to_show)} tasks")
         
         if not tasks_to_show:
             if self.active_project_id is None:
                 table.add_row("No tasks found.", "", "", "")
+                logger.info("No tasks found (all projects)")
             else:
                 project_name = self.get_active_project_name()
                 table.add_row(f"No tasks found in {project_name}.", "", "", "")
+                logger.info(f"No tasks found in project {project_name}")
         else:
+            logger.info(f"Adding {len(tasks_to_show)} tasks to table")
             for task in tasks_to_show:
                 if isinstance(task, Task):
                     due_date = getattr(task.due, 'date', 'N/A')
                     project_name = self.client.get_project_name(task.project_id)
                     
                     # Format labels for display with colors
-                    label_names = []
+                    label_objects = []
                     if task.labels:  # Check if labels exist and are not None
                         for label_id in task.labels:
                             formatted_label = format_label_with_color(
@@ -142,11 +158,21 @@ class TodoistTUI(App):
                                 self.client.label_color_map,
                                 self.client.label_by_name
                             )
-                            label_names.append(formatted_label)
-                    labels_display = ', '.join(label_names) if label_names else ''
+                            label_objects.append(formatted_label)
+                    
+                    # Combine Rich Text objects with commas
+                    if label_objects:
+                        labels_display = Text("")
+                        for i, label_obj in enumerate(label_objects):
+                            if i > 0:
+                                labels_display.append(", ")
+                            labels_display.append(label_obj)
+                    else:
+                        labels_display = Text("")
                     
                     # Use task.id as the row key (internal identifier)
                     table.add_row(task.content, due_date, project_name, labels_display, key=task.id)
+                    logger.debug(f"Added task: {task.content[:50]}...")
                 else:
                     logger.warning(f"Skipping non-task item: {task}")
         
@@ -159,8 +185,24 @@ class TodoistTUI(App):
         project_name = self.get_active_project_name()
         if self.active_filter:
             self.title = f"Todoist TUI - {project_name} - {self.active_filter_name}"
+            logger.info(f"Updated title to: {self.title}")
         else:
             self.title = f"Todoist TUI - {project_name}"
+            logger.info(f"Updated title to: {self.title}")
+        
+        # Update the filter status label
+        from textual.widgets import Label
+        try:
+            filter_label = self.query_one("#filter_status", Label)
+            filter_text = f"Current Filter: {self.active_filter_name}"
+            if self.active_filter:
+                filter_text += f" (Query: {self.active_filter})"
+            filter_label.update(filter_text)
+            logger.info(f"Updated filter label to: {filter_text}")
+        except Exception as e:
+            logger.error(f"Failed to update filter label: {e}")
+        
+        logger.info("_refresh_table_display completed")
 
     def update_table_error(self, error: Exception) -> None:
         """Update the DataTable with an error message."""
@@ -187,14 +229,24 @@ class TodoistTUI(App):
 
     def action_refresh(self) -> None:
         """Refresh tasks from the server and update the display."""
+        logger.info(f"ACTION_REFRESH called with active_filter: '{self.active_filter}'")
+        
         # Fetch fresh data from the server
-        self.client.fetch_tasks()
         self.client.fetch_projects() 
         self.client.fetch_labels()
         self.client.fetch_filters()
         
-        # Refresh the table display
-        self._refresh_table_display()
+        # Re-apply the current filter if one is active
+        if self.active_filter:
+            logger.info(f"Re-applying active filter: '{self.active_filter}'")
+            def fetch_with_filter():
+                return self.fetch_filtered_tasks(self.active_filter)
+            self.run_worker(fetch_with_filter, thread=True)
+        else:
+            logger.info("No active filter, fetching all tasks")
+            # Fetch all tasks and refresh display
+            self.client.fetch_tasks()
+            self._refresh_table_display()
         
         # Provide user feedback with visual notification
         self.notify("Tasks refreshed!", severity="information")
@@ -322,37 +374,44 @@ class TodoistTUI(App):
 
     def set_active_filter(self, filter_query: Optional[str], filter_name: str) -> None:
         """Set the active filter and refresh the display."""
+        logger.info(f"SET_ACTIVE_FILTER called with query='{filter_query}', name='{filter_name}'")
         self.apply_filter(filter_query, filter_name)
 
     def fetch_filtered_tasks(self, filter_query: str) -> None:
         """Fetch tasks using a filter query."""
         try:
-            logger.info(f"Fetching tasks with filter: {filter_query}")
+            logger.info(f"FETCH_FILTERED_TASKS called with filter_query: '{filter_query}'")
             
             # Fetch projects, labels, and filters first
+            logger.info("Fetching projects, labels, and filters...")
             self.client.fetch_projects()
             self.client.fetch_labels()
             self.client.fetch_filters()
             
             # Fetch tasks with filter
+            logger.info(f"About to call client.fetch_tasks_with_filter with query: '{filter_query}'")
             tasks = self.client.fetch_tasks_with_filter(filter_query)
+            logger.info(f"Got {len(tasks)} tasks from fetch_tasks_with_filter")
             self.call_from_thread(self.update_table, tasks)
         except Exception as e:
             logger.error(f"An error occurred during filtered fetch: {e}", exc_info=True)
             self.call_from_thread(self.update_table_error, e)
-            self.call_from_thread(self.update_table_error, e)
 
     def apply_filter(self, filter_query: Optional[str], filter_name: str) -> None:
         """Apply a filter and refresh tasks."""
+        logger.info(f"APPLY_FILTER called with query='{filter_query}', name='{filter_name}'")
         self.active_filter = filter_query
         self.active_filter_name = filter_name
+        logger.info(f"Set active_filter='{self.active_filter}', active_filter_name='{self.active_filter_name}'")
         
         if filter_query:
+            logger.info(f"Starting filtered fetch with query: '{filter_query}'")
             # Create a lambda wrapper for the run_worker call
             def fetch_with_filter():
                 return self.fetch_filtered_tasks(filter_query)
             self.run_worker(fetch_with_filter, thread=True)
         else:
+            logger.info("Starting fetch of all tasks (no filter)")
             # Fetch all tasks (no filter)
             self.run_worker(self.fetch_tasks, thread=True)
 

@@ -11,7 +11,9 @@ from textual.screen import ModalScreen
 from textual.coordinate import Coordinate
 from todoist_api_python.models import Project
 
-from ..utils import extract_task_id_from_row_key
+from ..utils import extract_task_id_from_row_key, format_filter_with_color, format_filter_with_color
+from ..colors import get_filter_color, format_colored_text
+from rich.text import Text
 
 if TYPE_CHECKING:
     from ..app import TodoistTUI
@@ -701,17 +703,19 @@ class FilterSelectScreen(ModalScreen):
         table.add_columns("Filter", "Description")
         table.cursor_type = "row"
         
-        # Add built-in filter options
+        # Add built-in filter options with default colors
         filters = [
-            ("all", "All Tasks", "Show all tasks"),
-            ("today", "Today", "Tasks due today"),
-            ("this_week", "This Week", "Tasks due this week"),
-            ("overdue", "Overdue", "Tasks that are overdue"),
+            ("all", "All Tasks", "Show all tasks", "charcoal"),
+            ("today", "Today", "Tasks due today", "orange"),
+            ("7_days", "Next 7 Days", "Tasks due in the next 7 days", "blue"),
+            ("overdue", "Overdue", "Tasks that are overdue", "red"),
         ]
         
         # Add built-in filters
-        for filter_key, filter_name, description in filters:
-            table.add_row(filter_name, description, key=filter_key)
+        for filter_key, filter_name, description, color in filters:
+            # Use the shared color utility to format the filter name with proper colors
+            colored_name = format_filter_with_color(filter_name, color)
+            table.add_row(colored_name, description, key=filter_key)
         
         # Add user-defined filters
         app = cast("TodoistTUI", self.app)
@@ -735,16 +739,20 @@ class FilterSelectScreen(ModalScreen):
             
             logging.info(f"Adding {len(app.client.filters_cache)} user-defined filters to modal")
             
-            # Add each user filter
+            # Add each user filter with its color
             for filter_obj in app.client.filters_cache:
                 if isinstance(filter_obj, dict) and "id" in filter_obj and "name" in filter_obj:
                     filter_id = str(filter_obj["id"])
                     filter_name = filter_obj["name"]
                     filter_query = filter_obj.get("query", "")
+                    filter_color = filter_obj.get("color", "white")
                     description = f"Query: {filter_query}" if filter_query else "User-defined filter"
                     
-                    logging.info(f"Adding filter: {filter_name} (ID: {filter_id})")
-                    table.add_row(filter_name, description, key=f"user_filter_{filter_id}")
+                    # Use the shared color utility to format the filter name with proper colors
+                    colored_name = format_filter_with_color(filter_name, filter_color)
+                    
+                    logging.info(f"Adding filter: {filter_name} (ID: {filter_id}) with color: {filter_color}")
+                    table.add_row(colored_name, description, key=f"user_filter_{filter_id}")
         else:
             logging.warning("No user-defined filters found in cache")
             # Add informative message
@@ -804,39 +812,64 @@ class FilterSelectScreen(ModalScreen):
     
     def action_select_filter(self):
         """Select the highlighted filter."""
+        logger.info("FILTER_SCREEN: action_select_filter called")
         table = self.query_one("#filter_table", DataTable)
         row = table.cursor_coordinate.row if table.cursor_coordinate else None
+        logger.info(f"FILTER_SCREEN: Current row: {row}")
         if row is not None:
             try:
-                row_keys = list(table.rows.keys())
-                if 0 <= row < len(row_keys):
-                    filter_key = str(row_keys[row])  # Convert to string
-                    app = cast("TodoistTUI", self.app)
-                    
-                    # Skip separator row
-                    if filter_key == "separator":
-                        return
-                    
-                    # Apply the selected filter
-                    if filter_key == "all":
-                        app.set_active_filter(None, "All Tasks")
-                    elif filter_key == "today":
-                        app.set_active_filter("today", "Today")
-                    elif filter_key == "this_week":
-                        app.set_active_filter("this_week", "This Week")
-                    elif filter_key == "overdue":
-                        app.set_active_filter("overdue", "Overdue")
-                    elif filter_key.startswith("user_filter_"):
-                        # Handle user-defined filter
-                        filter_id = filter_key.replace("user_filter_", "")
-                        filter_obj = app.client.get_filter_by_id(filter_id)
-                        if filter_obj:
-                            filter_name = filter_obj["name"]  
-                            filter_query = filter_obj.get("query", "")
-                            app.set_active_filter(filter_query, filter_name)
-                    
-                    self.dismiss()
-            except (AttributeError, IndexError):
+                app = cast("TodoistTUI", self.app)
+                
+                # Map row index to filter actions based on our known structure
+                # Built-in filters: 0=all, 1=today, 2=7_days, 3=overdue
+                # Then separator at 4
+                # User filters start at 5
+                
+                if row == 0:  # "All Tasks"
+                    logger.info("FILTER_SCREEN: Applying 'All Tasks' filter")
+                    app.set_active_filter(None, "All Tasks")
+                elif row == 1:  # "Today"
+                    logger.info("FILTER_SCREEN: Applying 'Today' filter")
+                    colored_name = format_filter_with_color("Today", "orange")
+                    app.set_active_filter("today", colored_name)
+                elif row == 2:  # "Next 7 Days"
+                    logger.info("FILTER_SCREEN: Applying 'Next 7 Days' filter")
+                    colored_name = format_filter_with_color("Next 7 Days", "blue")
+                    app.set_active_filter("7 days", colored_name)
+                elif row == 3:  # "Overdue"
+                    logger.info("FILTER_SCREEN: Applying 'Overdue' filter")
+                    colored_name = format_filter_with_color("Overdue", "red")
+                    app.set_active_filter("overdue", colored_name)
+                elif row == 4:  # Separator row
+                    logger.info("FILTER_SCREEN: Skipping separator row")
+                    return
+                elif row >= 5:  # User-defined filters
+                    # Calculate user filter index
+                    user_filter_index = row - 5
+                    if hasattr(app.client, 'filters_cache') and app.client.filters_cache:
+                        if user_filter_index < len(app.client.filters_cache):
+                            filter_obj = app.client.filters_cache[user_filter_index]
+                            if isinstance(filter_obj, dict) and "name" in filter_obj:
+                                filter_name = filter_obj["name"]  
+                                filter_query = filter_obj.get("query", "")
+                                filter_color = filter_obj.get("color", "charcoal")
+                                # Format the filter name with color for display
+                                colored_filter_name = format_filter_with_color(filter_name, filter_color)
+                                logger.info(f"FILTER_SCREEN: Applying user filter '{filter_name}' with query: '{filter_query}', color: '{filter_color}'")
+                                app.set_active_filter(filter_query, colored_filter_name)
+                            else:
+                                logger.error(f"FILTER_SCREEN: Invalid filter object at index {user_filter_index}")
+                        else:
+                            logger.error(f"FILTER_SCREEN: User filter index {user_filter_index} out of range")
+                    else:
+                        logger.error("FILTER_SCREEN: No user filters available")
+                else:
+                    logger.warning(f"FILTER_SCREEN: Unknown row index: {row}")
+                
+                logger.info("FILTER_SCREEN: Dismissing modal")
+                self.dismiss()
+            except Exception as e:
+                logger.error(f"FILTER_SCREEN: Error in action_select_filter: {e}")
                 pass
     
     def on_data_table_row_selected(self, event):

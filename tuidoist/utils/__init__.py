@@ -4,13 +4,15 @@ import logging
 import re
 from typing import Optional, Tuple
 
-from ..config import TODOIST_COLOR_MAP
+from ..colors import get_label_color, get_filter_color, get_todoist_color, format_colored_text
+from ..config import TODOIST_COLOR_MAP  # For backward compatibility
+from rich.text import Text
 
 logger = logging.getLogger(__name__)
 
 
-def format_label_with_color(label_identifier: str, label_name_map: dict, label_color_map: dict, label_by_name: dict) -> str:
-    """Format a label with its color using rich markup."""
+def format_label_with_color(label_identifier: str, label_name_map: dict, label_color_map: dict, label_by_name: dict):
+    """Format a label with its color using Rich Text object for DataTable."""
     # Try to get the label name (works for both ID and name lookups)
     label_name = label_name_map.get(label_identifier) or label_by_name.get(label_identifier, label_identifier)
     
@@ -28,14 +30,15 @@ def format_label_with_color(label_identifier: str, label_name_map: dict, label_c
     # Debug logging
     logger.info(f"Label '{label_identifier}' -> name: '{label_name}', color: '{label_color}'")
     
-    if label_color and label_color in TODOIST_COLOR_MAP:
-        rich_color = TODOIST_COLOR_MAP[label_color]
-        formatted = f"[{rich_color}]{label_name}[/{rich_color}]"
-        logger.info(f"Formatted label: '{formatted}'")
-        return formatted
+    if label_color:
+        # Use Rich Text object with the exact Todoist hex color
+        hex_color = get_label_color(label_color)
+        text_obj = Text(label_name, style=hex_color)
+        logger.info(f"Created Rich Text object for label: '{label_name}' with color: '{hex_color}'")
+        return text_obj
     else:
-        logger.info(f"No color mapping found for '{label_color}', returning plain: '{label_name}'")
-        return label_name
+        logger.info(f"No color found for label '{label_identifier}', returning plain text: '{label_name}'")
+        return Text(label_name)
 
 
 def parse_natural_language_date(content: str) -> Tuple[str, Optional[str]]:
@@ -91,3 +94,22 @@ def extract_task_id_from_row_key(row_key) -> Optional[str]:
 def validate_api_token(token: Optional[str]) -> bool:
     """Validate that the API token is properly set."""
     return token is not None and isinstance(token, str) and len(token.strip()) > 0
+
+
+def format_filter_with_color(filter_name: str, filter_color: str):
+    """Format a filter name with its color using Rich Text object for DataTable."""
+    logger.info(f"Formatting filter '{filter_name}' with color '{filter_color}'")
+    
+    if filter_color:
+        # Use Rich Text object with the exact Todoist hex color
+        hex_color = get_filter_color(filter_color)
+        # Create separate Text objects for the bullet and name
+        bullet_text = Text("●", style=hex_color)
+        name_text = Text(f" {filter_name}")
+        # Combine them
+        combined_text = bullet_text + name_text
+        logger.info(f"Created Rich Text object for filter: '{filter_name}' with color: '{hex_color}'")
+        return combined_text
+    else:
+        logger.info(f"No color found for filter '{filter_name}', returning plain text")
+        return Text(f"● {filter_name}")
