@@ -63,6 +63,24 @@ class DeleteConfirmScreen(ModalScreen):
 class ProjectSelectScreen(ModalScreen):
     """Modal screen for selecting a project to filter by."""
     
+    CSS = """
+    ProjectSelectScreen {
+        align: center middle;
+    }
+    
+    #project_container {
+        background: $surface;
+        border: solid $primary;
+        padding: 1;
+        width: 120;
+        height: 40;
+    }
+    
+    #project_table {
+        height: 35;
+    }
+    """
+    
     BINDINGS = [
         ("escape", "dismiss", "Cancel"),
         ("q", "dismiss", "Cancel"),
@@ -82,6 +100,7 @@ class ProjectSelectScreen(ModalScreen):
         yield Vertical(
             Label("Select Project (j/k to navigate, Enter to select, q to cancel):"),
             DataTable(id="project_table"),
+            id="project_container"
         )
 
     def on_mount(self) -> None:
@@ -411,6 +430,24 @@ class EditTaskScreen(ModalScreen):
 class LabelManagementScreen(ModalScreen):
     """Modal screen for managing task labels with multi-select functionality."""
     
+    CSS = """
+    LabelManagementScreen {
+        align: center middle;
+    }
+    
+    #label_container {
+        background: $surface;
+        border: solid $primary;
+        padding: 1;
+        width: 120;
+        height: 40;
+    }
+    
+    #label_list {
+        height: 32;
+    }
+    """
+    
     BINDINGS = [
         ("escape", "dismiss", "Cancel"),
         ("q", "dismiss", "Cancel"),
@@ -463,7 +500,7 @@ class LabelManagementScreen(ModalScreen):
                 Button("Cancel", id="cancel_labels"),
                 classes="button_row",
             ),
-            classes="label_management",
+            id="label_container",
         )
 
     def on_mount(self):
@@ -671,14 +708,14 @@ class FilterSelectScreen(ModalScreen):
     
     #filter_container {
         background: $surface;
-        border: thick $accent;
+        border: solid $primary;
         padding: 1;
-        width: 50;
-        height: 15;
+        width: 120;
+        height: 40;
     }
     
     #filter_table {
-        height: 10;
+        height: 35;
     }
     """
     
@@ -686,7 +723,7 @@ class FilterSelectScreen(ModalScreen):
         yield Vertical(
             Label("Select Filter", id="filter_title"),
             DataTable(id="filter_table"),
-            Label("Press Enter to select, R to refresh, Esc to cancel"),
+            Label("Press Enter to select, R to refresh, Q/Esc to cancel"),
             id="filter_container"
         )
     
@@ -764,6 +801,7 @@ class FilterSelectScreen(ModalScreen):
     
     BINDINGS = [
         ("escape", "cancel", "Cancel"),
+        ("q", "cancel", "Cancel"),
         ("enter", "select_filter", "Select"),
         ("r", "refresh_filters", "Refresh"),
         ("j", "cursor_down", ""),
