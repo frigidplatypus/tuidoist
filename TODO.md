@@ -8,6 +8,8 @@
 - ✅ **Completed**: Vim-style navigation
 - ✅ **Completed**: Refresh functionality
 - ✅ **Completed**: Modular codebase architecture
+- ✅ **Completed**: Todoist API v1 integration with current REST endpoints (deprecated sync API migrated)
+- ✅ **Completed**: Filter display functionality with proper API v1 integration
 
 ---
 
@@ -22,14 +24,14 @@
 
 ### 2. Due Date Management & Time-Based Filtering
 - [ ] **2.1** Add due date time display (not just date)
-- [ ] **2.2** Create filter menu modal (`f` key)
-- [ ] **2.3** Implement "Today" filter (`f` → `t`)
-- [ ] **2.4** Implement "This Week" filter (`f` → `w`)
-- [ ] **2.5** Implement "Overdue" filter (`f` → `o`)
-- [ ] **2.6** Add "All" filter to clear filters (`f` → `a`)
+- ✅ **2.2** Create filter menu modal (`f` key)
+- ✅ **2.3** Implement "Today" filter (`f` → `t`)
+- ✅ **2.4** Implement "This Week" filter (`f` → `w`)
+- ✅ **2.5** Implement "Overdue" filter (`f` → `o`)
+- ✅ **2.6** Add "All" filter to clear filters (`f` → `a`)
 - [ ] **2.7** Add visual indicators for overdue tasks (red highlighting)
 - [ ] **2.8** Add "upcoming" indicators (tasks due within 3 days)
-- [ ] **2.9** Show current filter in status/title bar
+- ✅ **2.9** Show current filter in status/title bar
 
 ### 3. Task Sorting & Organization
 - [ ] **3.1** Add sort menu modal (`s` key)
@@ -64,7 +66,7 @@
 - [ ] **6.3** Add search by labels
 - [ ] **6.4** Add search by project
 - [ ] **6.5** Implement combined filters (project + label + due date)
-- [ ] **6.6** Add saved filter functionality
+- ✅ **6.6** Add saved filter functionality (user-defined filters via Todoist API)
 
 ### 7. Task Comments & Rich Content
 - [ ] **7.1** Add task comments viewing (`c` key)
@@ -170,11 +172,11 @@
 # 5. Commit and merge
 
 # File structure for new features:
-# - API changes: ptaskwarrior_tui/api/__init__.py
-# - New screens: ptaskwarrior_tui/screens/__init__.py
-# - App-level features: ptaskwarrior_tui/app.py
-# - Utilities: ptaskwarrior_tui/utils/__init__.py
-# - Styling: ptaskwarrior_tui/styles.tcss
+# - API changes: tuidoist/api/__init__.py
+# - New screens: tuidoist/screens/__init__.py
+# - App-level features: tuidoist/app.py
+# - Utilities: tuidoist/utils/__init__.py
+# - Styling: tuidoist/styles.tcss
 ```
 
 ### Priority Guidelines:

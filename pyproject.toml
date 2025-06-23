@@ -1,5 +1,5 @@
 [project]
-name = "ptaskwarrior-tui"
+name = "tuidoist"
 version = "0.1.0"
 description = "A modal TUI for viewing Todoist tasks using Textual."
 authors = ["Your Name <you@example.com>"]
@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ptaskwarrior-tui = "ptaskwarrior_tui.app:main"
+tuidoist = "tuidoist.app:main"
 
 [tool.uv]
 # uv-specific settings can go here

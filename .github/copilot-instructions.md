@@ -1,0 +1,1 @@
+The current api for todoist is found at https://developer.todoist.com/api/v1/

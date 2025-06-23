@@ -1,4 +1,4 @@
-# Ptaskwarrior TUI
+# Tuidoist
 
 A modern, modal TUI (Terminal User Interface) for viewing and managing Todoist tasks using [Textual](https://textual.textualize.io/).
 
@@ -16,7 +16,7 @@ A modern, modal TUI (Terminal User Interface) for viewing and managing Todoist t
 The application has been refactored from a monolithic `tui.py` file into a well-organized package structure:
 
 ```
-ptaskwarrior_tui/
+tuidoist/
 ├── __init__.py          # Package initialization and exports
 ├── app.py               # Main application class (TodoistTUI)
 ├── api/                 # Todoist API client wrapper
@@ -59,8 +59,26 @@ ptaskwarrior_tui/
    ```bash
    python main.py
    # or using the package entry point:
-   ptaskwarrior-tui
+   tuidoist
    ```
+
+## Todoist API Integration
+
+This application integrates with the **Todoist API v1**. For any development work involving the Todoist API, always refer to the canonical, up-to-date documentation:
+
+**📚 [Todoist API v1 Documentation](https://developer.todoist.com/api/v1/)**
+
+### Key API Information
+- **Base URL**: `https://api.todoist.com/rest/v1/`
+- **Authentication**: Bearer token via `Authorization` header
+- **Resources**: Tasks, Projects, Labels, Filters, Comments, and more
+
+### Important Notes
+- **Always use the current API v1** - deprecated endpoints (like the sync API) may return 410 Gone errors
+- **Check the official documentation** for the latest endpoint specifications, request/response formats, and rate limits
+- **API Token**: Get your personal API token from [Todoist Integrations Settings](https://todoist.com/prefs/integrations)
+
+The application's API client is located in `tuidoist/api/` and handles authentication, caching, and error handling for all Todoist API interactions.
 
 ## Architecture Benefits
 
