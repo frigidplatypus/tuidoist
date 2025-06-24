@@ -3,8 +3,25 @@
 from typing import Optional
 from textual.widgets import Static
 from textual.reactive import reactive
+from textual.containers import Horizontal, Vertical, Container
+from textual.widget import Widget
 from todoist_api_python.models import Task
 from datetime import datetime, timezone
+
+
+class HorizontalSplitContainer(Container):
+    """A simple horizontal split container with top and bottom widgets."""
+    
+    def __init__(self, top_widget: Widget, bottom_widget: Widget, **kwargs):
+        super().__init__(**kwargs)
+        self.top_widget = top_widget
+        self.bottom_widget = bottom_widget
+    
+    def compose(self):
+        """Compose the split layout."""
+        with Vertical():
+            yield self.top_widget
+            yield self.bottom_widget
 
 
 class TaskDetailWidget(Static):
