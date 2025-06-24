@@ -8,12 +8,14 @@ import logging
 from typing import Optional, List, Any
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, DataTable
+from textual.containers import Vertical, Container
 from textual.coordinate import Coordinate
 from todoist_api_python.models import Task
 
 from .api import TodoistClient
 from .utils import format_label_with_color, extract_task_id_from_row_key, format_project_with_color, format_priority_indicator
 from .keybindings import get_keybindings
+from .widgets import TaskDetailWidget, HorizontalSplitContainer
 from rich.text import Text
 from .screens import (
     DeleteConfirmScreen,
@@ -42,11 +44,22 @@ class TodoistTUI(App[None]):
         self.active_filter: Optional[str] = None  # Current active filter (None = no filter)
         self.active_filter_name: str = "All Tasks"  # Display name for current filter
         self.error: Optional[str] = None
+        self.show_details: bool = True  # Toggle for showing/hiding details panel
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
-        yield DataTable(id="tasks_table")
+        
+        # Always create split layout, but adjust visibility via CSS in toggle
+        self.tasks_table = DataTable(id="tasks_table")
+        self.task_detail_widget = TaskDetailWidget(id="task_detail_widget")
+        
+        yield HorizontalSplitContainer(
+            top_widget=self.tasks_table,
+            bottom_widget=self.task_detail_widget,
+            id="split_container"
+        )
+        
         yield Footer()
 
     def on_mount(self) -> None:
@@ -59,6 +72,59 @@ class TodoistTUI(App[None]):
             return
         
         self.run_worker(self.fetch_tasks, thread=True)
+
+    def on_ready(self) -> None:
+        """Called when the app is ready."""
+        # Set up the task detail widget with client reference
+        detail_widget = self.query_one("#task_detail_widget", TaskDetailWidget)
+        detail_widget.client = self.client
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle task selection to update the details panel."""
+        # Get the task ID from the selected row
+        task_id = self.get_selected_row_key()
+        if task_id is None:
+            return
+        
+        actual_task_id = extract_task_id_from_row_key(task_id)
+        if not actual_task_id:
+            return
+        
+        # Find the corresponding Task object from our cache
+        selected_task = None
+        for task in self.client.tasks_cache:
+            if isinstance(task, Task) and task.id == actual_task_id:
+                selected_task = task
+                break
+        
+        # Update the details panel (only if visible)
+        if self.show_details:
+            detail_widget = self.query_one("#task_detail_widget", TaskDetailWidget)
+            detail_widget.update_task(selected_task)
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """Handle task highlighting to update the details panel automatically."""
+        if not self.show_details:
+            return
+            
+        # Get the task ID from the highlighted row
+        if event.row_key is None:
+            return
+            
+        actual_task_id = extract_task_id_from_row_key(event.row_key.value)
+        if not actual_task_id:
+            return
+        
+        # Find the corresponding Task object from our cache
+        selected_task = None
+        for task in self.client.tasks_cache:
+            if isinstance(task, Task) and task.id == actual_task_id:
+                selected_task = task
+                break
+        
+        # Update the details panel
+        detail_widget = self.query_one("#task_detail_widget", TaskDetailWidget)
+        detail_widget.update_task(selected_task)
 
     def get_active_project_name(self) -> str:
         """Get the name of the currently active project."""
@@ -130,6 +196,9 @@ class TodoistTUI(App[None]):
                 if isinstance(task, Task):
                     due_date = getattr(task.due, 'date', 'N/A')
                     
+                    # Debug logging for task priority
+                    logger.debug(f"Task '{task.content}' has priority: {task.priority} (type: {type(task.priority)})")
+                    
                     # Format priority indicator and task content
                     priority_indicator = format_priority_indicator(task.priority)
                     task_content = Text("")
@@ -176,6 +245,13 @@ class TodoistTUI(App[None]):
         if tasks_to_show:
             table.cursor_type = "row"
             table.cursor_coordinate = Coordinate(0, 0)
+            
+            # Auto-update details panel with first task (if details are visible)
+            if self.show_details:
+                first_task = tasks_to_show[0] if isinstance(tasks_to_show[0], Task) else None
+                if first_task:
+                    detail_widget = self.query_one("#task_detail_widget", TaskDetailWidget)
+                    detail_widget.update_task(first_task)
         
         # Update the title to show active project and filter
         project_name = self.get_active_project_name()
@@ -417,7 +493,44 @@ class TodoistTUI(App[None]):
         else:
             self.bell()
 
-    # ...existing code...
+    def action_toggle_details(self) -> None:
+        """Toggle the details panel visibility."""
+        self.show_details = not self.show_details
+        
+        # Get the widgets directly
+        tasks_table = self.query_one("#tasks_table", DataTable)
+        detail_widget = self.query_one("#task_detail_widget", TaskDetailWidget)
+        
+        if self.show_details:
+            # Show the details panel
+            detail_widget.display = True
+            tasks_table.styles.height = "60%"
+            detail_widget.styles.height = "40%"
+            
+            # Set up the task detail widget with client reference if not already done
+            if not detail_widget.client:
+                detail_widget.client = self.client
+            
+            # Update with current task if any is selected
+            current_row_key = self.get_selected_row_key()
+            if current_row_key:
+                actual_task_id = extract_task_id_from_row_key(current_row_key)
+                if actual_task_id:
+                    selected_task = None
+                    for task in self.client.tasks_cache:
+                        if isinstance(task, Task) and task.id == actual_task_id:
+                            selected_task = task
+                            break
+                    if selected_task:
+                        detail_widget.update_task(selected_task)
+        else:
+            # Hide the details panel and expand task list to full height
+            detail_widget.display = False
+            tasks_table.styles.height = "100%"
+        
+        # Force a refresh of the layout
+        self.refresh(layout=True)
+
 def setup_config():
     """Interactive setup to configure API token."""
     from .config import get_config_directory

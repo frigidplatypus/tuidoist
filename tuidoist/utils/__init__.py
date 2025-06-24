@@ -4,7 +4,7 @@ import logging
 import re
 from typing import Optional, Tuple, Dict, Any
 
-from ..colors import get_label_color, get_filter_color, get_project_color
+from ..colors import get_label_color, get_filter_color, get_project_color, get_priority_color
 from rich.text import Text
 
 logger = logging.getLogger(__name__)
@@ -157,22 +157,24 @@ def format_priority_indicator(priority: int) -> Text:
     """Format priority as a colored indicator.
     
     Args:
-        priority: Priority level from 1 (normal) to 4 (urgent)
+        priority: Priority level from 1 (urgent) to 4 (normal)
         
     Returns:
         Rich Text object with colored priority indicator
     """
-    # Priority mappings according to Todoist API:
-    # 1 = normal (default, no indicator)
-    # 2 = low (blue)
-    # 3 = medium (yellow/orange) 
-    # 4 = urgent (red)
+    # Priority mappings according to Todoist:
+    # 1 = urgent (highest priority) - red
+    # 2 = high priority - orange
+    # 3 = medium priority - blue
+    # 4 = normal (lowest priority) - grey
     
-    if priority == 4:
-        return Text("🔴", style="red")  # Urgent - red circle
-    elif priority == 3:
-        return Text("🟡", style="yellow")  # Medium - yellow circle
-    elif priority == 2:
-        return Text("🔵", style="blue")  # Low - blue circle
-    else:
-        return Text("⚪", style="white")  # Normal - white circle
+    logger.debug(f"format_priority_indicator called with priority: {priority} (type: {type(priority)})")
+    
+    # Get the proper Todoist color for this priority level
+    priority_color = get_priority_color(priority)
+    
+    # Create the colored indicator using the same color system as projects/labels/filters
+    result = Text("●", style=priority_color)
+    logger.debug(f"Priority {priority}: returning circle with color '{priority_color}' - {result}")
+    
+    return result

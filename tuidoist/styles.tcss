@@ -1,0 +1,42 @@
+/* Split container for horizontal layout */
+#split_container {
+    layout: vertical;
+    height: 100%;
+}
+
+/* Task table styling (top pane) */
+#tasks_table {
+    height: 60%;
+    border: solid $primary;
+    margin: 0 1;
+}
+
+/* Task detail widget styling (bottom pane) */
+#task_detail_widget {
+    height: 40%;
+    border: solid $secondary;
+    margin: 0 1;
+    padding: 1;
+    scrollbar-gutter: stable;
+    overflow: auto;
+}
+
+/* When details are hidden */
+#task_detail_widget.hidden {
+    display: none;
+    height: 0%;
+}
+
+/* When details are hidden, task table takes full height */
+.details-hidden #tasks_table {
+    height: 100%;
+}
+
+/* Dark theme specific adjustments */
+App.-dark-mode #tasks_table {
+    border: solid $primary 50%;
+}
+
+App.-dark-mode #task_detail_widget {
+    border: solid $secondary 50%;
+}

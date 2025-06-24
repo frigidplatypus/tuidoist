@@ -241,3 +241,29 @@ def get_color_preview(color_name: str) -> str:
     color = get_todoist_color(color_name, use_hex=True)
     # Use a colored bullet point as a visual indicator
     return f'[color={color}]●[/color] {color_name}'
+
+
+def get_priority_color(priority: int) -> str:
+    """
+    Get the Textual color for a Todoist priority level.
+    
+    Args:
+        priority: Priority level from 1 (urgent) to 4 (normal)
+    
+    Returns:
+        A Textual-compatible color string
+    """
+    # Priority color mappings based on user specification
+    # Priority 1 = urgent (red)
+    # Priority 2 = high (orange) 
+    # Priority 3 = medium (blue)
+    # Priority 4 = normal (grey)
+    priority_colors = {
+        1: 'red',        # Urgent - red
+        2: 'orange',     # High - orange
+        3: 'blue',       # Medium - blue
+        4: 'grey',       # Normal - grey
+    }
+    
+    color_name = priority_colors.get(priority, 'grey')
+    return get_todoist_color(color_name, use_hex=True)

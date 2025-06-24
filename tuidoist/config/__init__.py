@@ -102,7 +102,7 @@ def setup_logging():
         log_file = current_dir / "tui.log"
         logging.basicConfig(
             filename=log_file, 
-            level=logging.INFO, 
+            level=logging.DEBUG, 
             filemode="w", 
             format=LOG_FORMAT
         )

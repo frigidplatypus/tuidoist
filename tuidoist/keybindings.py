@@ -35,10 +35,11 @@ MAIN_APP: List[Keybinding] = [
     ("P", "change_task_project", "Move"),
     ("l", "manage_labels", "Labels"),
     ("f", "show_filter_modal", "Filter"),
-    ("1", "set_priority_1", "🔴 P1"),
-    ("2", "set_priority_2", "🔵 P2"),
-    ("3", "set_priority_3", "🟡 P3"),
-    ("4", "set_priority_4", "⚪ P4"),
+    ("i", "toggle_details", "Info"),
+    ("1", "set_priority_1", "P1"),
+    ("2", "set_priority_2", "P2"),
+    ("3", "set_priority_3", "P3"),
+    ("4", "set_priority_4", "P4"),
     ("0", "clear_priority", "Clear P"),
 ] + COMMON_NAVIGATION
 
